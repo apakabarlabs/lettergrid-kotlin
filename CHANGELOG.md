@@ -7,3 +7,15 @@ All notable changes to this library are documented here. The format follows
 behaviour it follows; major and minor versions match it.
 
 ## Unreleased
+
+The first release: lettergrid-swift 0.23.0 in Kotlin. A seed gives the board it gives in
+Swift, and the shared cases of both ports pass on each.
+
+### Added
+
+- `lettergrid-kotlin`: the board and its generation for straight and turned word paths,
+  word rules, filler letter weights, seeded randomness, selection, the round with its hints
+  and progress, the countdown, and restoring a saved board with `Board.validating` and
+  `Round.restoring`.
+- `lettergrid-kotlin-ui`: `LetterBoard`, `HiddenWordList`, `LetterHighlight` and
+  `LetterGridStyle` in Compose, coloured from the app's theme.
