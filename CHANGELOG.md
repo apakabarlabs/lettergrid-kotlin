@@ -22,7 +22,8 @@ minor release may change the boards.
 ## [0.24.0] - 2026-11-04
 
 What an app shows around the board, such as the list of words still to find, now belongs to
-the app: `HiddenWordList` is removed, and `LetterBoard` is the only view the library draws.
+the app: `HiddenWordList` is removed, and the library draws only the board, with `LetterBoard`
+and the `LetterHighlight` it uses.
 Code that passes `foundText` to `LetterGridStyle` or its `copy` no longer compiles, and since
 the parameter had no default, that is every app which builds a style. Code that calls
 `HiddenWordList` no longer compiles either. The API and behaviour of the board and the round
@@ -45,10 +46,11 @@ per letter, `null` where the letter is still hidden, and `round.found` is the
 `Set<Placement>` of found words. `round.changes` is a `StateFlow` that emits a new value on
 every change of the round; a composable that reads it with `collectAsState()` recomposes as
 the round is played, even though it ignores the value itself. This composable shows each
-word with the same order, letters, colour and TalkBack label as the removed list. The rest
-is now the app's to choose: the removed list was centred, used a monospaced `titleLarge` font
-with a fixed width per letter and showed the number as a separate, muted element that
-TalkBack read on its own, while this sketch puts the number into the word's line:
+word with the same order, letters and colour as the removed list, and TalkBack reads the same
+label for the word. The rest is now the app's to choose: the removed list was centred, used
+a monospaced `titleLarge` font with a fixed width per letter and showed the number as a
+separate, muted element that TalkBack read on its own, while this sketch puts the number into
+the word's line, where the label replaces it and TalkBack does not read it:
 
 ```kotlin
 // 0.23.0
@@ -111,9 +113,11 @@ same board as in Swift, and both libraries pass the same set of test cases.
   - A patch release keeps the boards a seed gives, but a minor release may change them, so a
     seed alone does not bring back a saved board across a minor update. To save a game, save
     the board's `letters` and `placements` and the round's `progress`; to restore it, pass
-    them to `Placement.validating`, `Board.validating` and `Round.restoring`. The first two
-    throw a `Board.Failure`, and `Round.restoring` a `RoundProgress.Failure` for bad
-    progress or a `Round.Failure` for rules the board does not follow. Each names what is
+    each saved word and its cells to `Placement.validating`, the letters and placements to
+    `Board.validating`, and the progress and board to `Round.restoring`, together with the
+    `WordRule`s or directions the round was started with. The first two throw a
+    `Board.Failure`, and `Round.restoring` a `RoundProgress.Failure` for bad progress or a
+    `Round.Failure` when a hidden word does not follow those rules. Each names what is
     wrong with the saved data, so the app can catch it and show it. The plain constructors throw
     `IllegalArgumentException` instead, the exception Kotlin uses for a programming mistake.
 - `lettergrid-kotlin-ui`, Compose views on Android 9 (API 28) or later:
