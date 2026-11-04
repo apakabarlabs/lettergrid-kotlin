@@ -139,11 +139,13 @@ make test                                 # tests, no device
 make test TEST=<class>                    # one test class of the core
 make docs                                 # the Dokka reference
 make -C ../lettergrid-swift sync-yaml     # after the shared cases or generation.yaml change there
+make release                              # publish the version of CHANGELOG's first heading
 ```
 
 The shared cases and `generation.yaml` are copies of lettergrid-swift's, and a test compares
-each with its `main` byte for byte. Releases are published by the
-[Release workflow](https://github.com/apakabarlabs/lettergrid-kotlin/actions/workflows/release.yml).
+each with its `main` byte for byte. `make release` starts the
+[Release workflow](https://github.com/apakabarlabs/lettergrid-kotlin/actions/workflows/release.yml)
+on `main` for the version of the first heading in CHANGELOG.md.
 
 ## Lines of Code
 
