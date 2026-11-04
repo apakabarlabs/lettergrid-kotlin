@@ -1,0 +1,66 @@
+seeds: [1, 7, 37]
+filler: {a: 1, d: 1, x: 1, q: 1, z: 1}
+cases:
+- name: forward
+  turns: [0]
+  words: [CAT, DOG, SUN]
+  directions: [right, down]
+  symbols: []
+  boards:
+    1: CATCZ/QZSDX/DOGZA/TQDUO/SUNGN
+    7: CATZN/ZUDCG/DOGOZ/TAQXD/SUNSQ
+    37: CATGX/TSZDA/DOGON/ZQCDQ/SUNXU
+- name: every-direction
+  turns: [0]
+  words: [CAT, DOG, SUN]
+  directions: [right, down, down_right, down_left, left, up, up_left, up_right]
+  symbols: []
+  boards:
+    1: CATCZ/QZSDX/DOGZA/TQDUO/SUNGN
+    7: CATZN/ZUDCG/DOGOZ/TAQXD/SUNSQ
+    37: CATGX/TSZDA/DOGON/ZQCDQ/SUNXU
+- name: separator
+  turns: [0]
+  words: [C-T, DOG, SUN]
+  directions: [right, down, down_right, down_left, left, up, up_left, up_right]
+  symbols: ['-']
+  boards:
+    1: C-TCZ/AQSAD/DOGZ-/TQDUO/SUNGN
+    7: C-TZN/ZUDCG/DOGOZ/T-QXD/SUNSQ
+    37: C-TGX/TSZA-/DOGON/ZQCDQ/SUNXU
+- name: reachable-targets
+  words: [ADX, DAQ, ZAX]
+  directions: [right, down, down_right, down_left, left, up, up_left, up_right]
+  symbols: []
+  turns: [0]
+  boards:
+    1: ADXAX/QZDXD/DAQZQ/XZQAX/ZAXZQ
+    7: ADXDQ/QZQAX/DAQDQ/XQZAZ/ZAXDX
+    37: ADXDQ/QZAZA/DAQDX/XDZAZ/ZAXDQ
+- name: forward-reachable-targets
+  words: [ADX, DAQ, ZAX]
+  directions: [right, down]
+  symbols: []
+  turns: [0]
+  boards:
+    1: ADXAX/ZADZD/DAQZA/QZDAX/ZAXZQ
+    7: ADXAZ/XZQDQ/DAQAX/QZDZQ/ZAXAX
+    37: ADXDZ/XZQAX/DAQDQ/QZAZA/ZAXQX
+- name: turns-unfillable
+  words: [ADX, DAQ, ZAX]
+  directions: [right, down, down_right, down_left, left, up, up_left, up_right]
+  symbols: []
+  turns: [0, 1]
+  boards:
+    1: <unfilled>
+    7: <unfilled>
+    37: <unfilled>
+- name: turns
+  words: [CAT, DOG, SUN]
+  directions: [right, down, down_right, down_left, left, up, up_left, up_right]
+  symbols: []
+  turns: [0, 1]
+  boards:
+    1: CATCZ/QZSDX/DOGZA/TQDUO/SUNGN
+    7: CATSN/XUDCG/DOGAQ/TZXZX/SUNOD
+    37: CATGX/TSZQA/DOGON/ZQCUQ/SUNXD

@@ -4,6 +4,7 @@ import com.vanniktech.maven.publish.SourcesJar
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     `java-library`
     alias(libs.plugins.maven.publish)
     alias(libs.plugins.ktlint)
@@ -11,6 +12,7 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.kotaml)
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
 }

@@ -1,0 +1,71 @@
+- name: straight space
+  words: ["a b", "cat", "sun"]
+  turns: 0
+  bounded: true
+- name: straight hyphen
+  words: ["a-b", "cat", "sun"]
+  turns: 0
+  bounded: true
+- name: straight apostrophe
+  words: ["a'b", "cat", "sun"]
+  turns: 0
+  bounded: true
+- name: multiple separators
+  words: ["a-b's", "c d", "sun"]
+  turns: 0
+  bounded: true
+- name: shared separators in targets
+  words: ["a-b", "c-d", "sun"]
+  turns: 0
+  bounded: true
+- name: every separator on a bounded straight board
+  words: ["a b", "c-d", "e'f"]
+  turns: 0
+  bounded: true
+- name: every separator on a growing straight board
+  words: ["a b", "c-d", "e'f"]
+  turns: 0
+  bounded: false
+- name: every separator on a turned board
+  words: ["a b", "c-d", "e'f"]
+  turns: 1
+  bounded: true
+- name: plain straight words
+  words: ["cat", "dog", "sun"]
+  turns: 0
+  bounded: true
+- name: plain turned words
+  words: ["cat", "dog", "sun"]
+  turns: 1
+  bounded: true
+- name: bounded field has no room for the required decoy
+  words: ["a-b"]
+  turns: 0
+  bounded: true
+  columns: 3
+  rows: 1
+  rejects: true
+- name: rare accented letter
+  words: ["égo", "cat", "sun"]
+  turns: 0
+  bounded: true
+  conditional: ["é"]
+  weights: {x: 1, q: 1, é: 100000}
+- name: absent rare letter never enters ordinary fill
+  words: ["dog", "cat", "sun"]
+  turns: 0
+  bounded: true
+  conditional: ["é"]
+  weights: {x: 1, q: 1, é: 100000}
+- name: turned rare letter
+  words: ["égo", "cat", "sun"]
+  turns: 1
+  bounded: true
+  conditional: ["é"]
+  weights: {x: 1, q: 1, é: 100000}
+- name: a tight board lays the words out with room for the extra copies
+  words: ["a-b", "cde", "-e"]
+  turns: 0
+  bounded: true
+  columns: 6
+  rows: 2

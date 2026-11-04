@@ -1,0 +1,211 @@
+- name: three long words that the random layout search refused now share the field
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [down_right, down_left], turns: 0}
+  - {directions: [left, up], turns: 0}
+  - {directions: [up_left, up_right], turns: 0}
+  - {directions: [right, down], turns: 1}
+  words: [STAIRCASE, DOMESTICITY, HABITATION]
+  fits: true
+- name: two words per direction force the third word into another direction
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules:
+  - {directions: [right], turns: 0}
+  - {directions: [right], turns: 0}
+  words: [CAT, DOG, SUN]
+  downWords: [0, 3]
+  maxWordsPerDirection: 2
+  fits: true
+- name: a direction limit also applies to growing requests
+  rules: [{directions: [right, down], turns: 1}]
+  leadingRules:
+  - {directions: [right], turns: 1}
+  - {directions: [right], turns: 1}
+  words: [PLANET, ORBIT, SUN]
+  grows: true
+  downWords: [0, 3]
+  maxWordsPerDirection: 2
+  fits: true
+- name: zero is not a valid direction limit
+  rules: [{directions: [right, down], turns: 0}]
+  words: [CAT, DOG, SUN]
+  maxWordsPerDirection: 0
+  accepted: false
+  failure: invalidConfiguration
+  fits: false
+- name: a negative direction limit is invalid
+  rules: [{directions: [right, down], turns: 0}]
+  words: [CAT, DOG, SUN]
+  maxWordsPerDirection: -1
+  accepted: false
+  failure: invalidConfiguration
+  fits: false
+- name: one word in each of two directions cannot accommodate three words
+  rules: [{directions: [right, down], turns: 0}]
+  words: [CAT, DOG, SUN]
+  maxWordsPerDirection: 1
+  accepted: false
+  fits: false
+- name: a leading prefix cannot exceed one direction's capacity
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules:
+  - {directions: [right], turns: 0}
+  - {directions: [right], turns: 0}
+  - {directions: [right], turns: 0}
+  words: [CAT, DOG, SUN]
+  maxWordsPerDirection: 2
+  accepted: false
+  fits: false
+- name: opposite vertical directions each have their own capacity
+  rules: [{directions: [up, down], turns: 0}]
+  words: [CAT, DOG, SUN]
+  downWords: [3, 3]
+  maxWordsPerDirection: 2
+  fits: true
+- name: a vertical quota and direction cap must both hold
+  rules: [{directions: [right, down], turns: 0}]
+  words: [CAT, DOG, SUN]
+  downWords: [3, 3]
+  maxWordsPerDirection: 2
+  fits: false
+- name: an unlimited direction remains available when no cap is supplied
+  rules: [{directions: [right], turns: 0}]
+  words: [CAT, DOG, SUN]
+  downWords: [0, 0]
+  fits: true
+- name: the largest positive cap does not overflow capacity checks
+  rules: [{directions: [right, down], turns: 0}]
+  words: [CAT, DOG, SUN]
+  maxWordsPerDirection: 9223372036854775807
+  fits: true
+- name: five words share one field
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [right, down], turns: 1}
+  words: [APPLE, BREAD, CHAIR, DREAM, EIGHT]
+  fits: true
+- name: one word alone fits
+  rules: [{directions: [right, down], turns: 1}]
+  words: [THIRTEENTHLY]
+  fits: true
+- name: a word inside another is refused before any search
+  rules: [{directions: [right, down], turns: 0}]
+  words: [CAT, SCAT]
+  accepted: false
+  fits: false
+- name: a word longer than any path the rules allow is refused before any search
+  rules: [{directions: [right, down], turns: 0}]
+  words: [SEVENTEEN]
+  accepted: false
+  fits: false
+- name: words with no turns lie straight once the first may lie straight
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [down_right, down_left], turns: 0}
+  words: [FIXTURE, VENEER, BEDDING]
+  fits: true
+- name: a full diagonal first word leaves the other two no line that agrees with it
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [down_right, down_left], turns: 0}
+  firstRule: {directions: [down_right, down_left], turns: 0}
+  words: [FIXTURE, VENEER, BEDDING]
+  fits: false
+- name: a word read backwards at the end of another has no cells of its own
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [left, up], turns: 0}
+  - {directions: [right, down], turns: 1}
+  - {directions: [left, up], turns: 1}
+  words: [KERING, ROTÁL, LÁT]
+  fits: false
+- name: a stage introduces right and down with one word in each direction
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules:
+  - {directions: [right], turns: 0}
+  - {directions: [down], turns: 0}
+  words: [CAT, DOG, SUN]
+  fits: true
+- name: leading turns survive a growing board and seeded repacking
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [right, down], turns: 1}
+  leadingRules:
+  - {directions: [right], turns: 1}
+  - {directions: [down], turns: 1}
+  words: [PLANET, ORBIT, SUN]
+  grows: true
+  fits: true
+- name: an empty leading list leaves every word free
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules: []
+  words: [CAT, DOG, SUN]
+  legacyEquivalent: true
+  fits: true
+- name: both leading words force the field to grow beyond its minimum height
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules:
+  - {directions: [down], turns: 0}
+  - {directions: [down], turns: 0}
+  words: [ELEPHANT, WATERFALL, SUN]
+  grows: true
+  fits: true
+- name: every leading rule needs its own word
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules:
+  - {directions: [right], turns: 0}
+  - {directions: [down], turns: 0}
+  words: [CAT]
+  accepted: false
+  fits: false
+- name: a later leading word cannot fit its required straight direction
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [right, down], turns: 1}
+  leadingRules:
+  - {directions: [down], turns: 0}
+  - {directions: [right], turns: 0}
+  words: [CAT, ELEPHANT, SUN]
+  accepted: false
+  fits: false
+- name: the vertical quota includes every leading word
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules:
+  - {directions: [right], turns: 0}
+  - {directions: [right], turns: 0}
+  - {directions: [right], turns: 0}
+  words: [CAT, DOG, SUN]
+  accepted: false
+  fits: false
+- name: individually fitting leading diagonals cannot cross on different letters
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [down_right, down_left], turns: 0}
+  leadingRules:
+  - {directions: [down_right], turns: 0}
+  - {directions: [down_left], turns: 0}
+  words: [ABCDEFG, HIJKLMN, SUN]
+  downWords: [0, 0]
+  fits: false
+- name: a leading rule must be enabled by the generator
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules: [{directions: [left], turns: 0}]
+  words: [CAT, DOG, SUN]
+  accepted: false
+  failure: invalidConfiguration
+  fits: false
+- name: a leading rule must have a direction
+  rules: [{directions: [right, down], turns: 0}]
+  leadingRules: [{directions: [], turns: 0}]
+  words: [CAT, DOG, SUN]
+  accepted: false
+  failure: invalidConfiguration
+  fits: false
+- name: one leading rule retains the legacy request and seeded boards
+  rules:
+  - {directions: [right, down], turns: 0}
+  - {directions: [right, down], turns: 1}
+  leadingRules: [{directions: [right, down], turns: 1}]
+  words: [PLANET, ORBIT, SUN]
+  legacyEquivalent: true
+  fits: true
