@@ -11,7 +11,15 @@ class BoardRequestTests {
     @Test
     fun anEmptyTargetListCannotBecomeAPlayableRequest() {
         val generator =
-            BoardGenerator(columns = 5, rows = 5, directions = listOf(Direction.RIGHT), filler = LetterWeights(mapOf("x" to 1.0)))
+            BoardGenerator(
+                columns = 5,
+                rows = 5,
+                directions = listOf(Direction.RIGHT),
+                filler =
+                    LetterWeights(
+                        mapOf("x" to 1.0),
+                    ),
+            )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(emptyList()) }
         assertEquals(BoardGenerator.Failure.NoRoom(emptyList(), 5, 5), failure)
     }
@@ -55,7 +63,14 @@ class BoardRequestTests {
         val generators =
             listOf(
                 BoardGenerator(columns = 5, rows = 5, directions = emptyList(), filler = filler),
-                BoardGenerator(columns = 5, rows = 5, directions = listOf(Direction.RIGHT), filler = filler, downWords = -1..1),
+                BoardGenerator(
+                    columns = 5,
+                    rows = 5,
+                    directions = listOf(Direction.RIGHT),
+                    filler = filler,
+                    downWords =
+                        -1..1,
+                ),
             )
         for (generator in generators) {
             val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("CAT")) }

@@ -8,36 +8,52 @@ fun BoardGenerator.accepts(
 fun BoardGenerator.accepts(
     words: List<String>,
     leadingRules: List<WordRule>,
-): Boolean {
-    if (!hasValidDirectionLimit || leadingRules.size > words.size || !leadingRules.all(::enables)) return false
-    val upper = words.map { it.cellUppercased }
-    val excluded = conditionalCharacters + upper.flatMap { it.cells }.filter { !it.isLetterCell }
-    val acceptable =
-        upper.isNotEmpty() &&
+): Boolean =
+    hasValidDirectionLimit &&
+        leadingRules.size <= words.size &&
+        leadingRules.all(::enables) &&
+        WordAcceptance(this, words.map { it.cellUppercased }, leadingRules).accepts()
+
+private class WordAcceptance(
+    val generator: BoardGenerator,
+    val upper: List<String>,
+    val leadingRules: List<WordRule>,
+) {
+    fun accepts(): Boolean =
+        acceptsWords() &&
+            fittingRules().let { fitting ->
+                fitting.all { it.isNotEmpty() } && spreads(fitting) && standsUp(fitting)
+            }
+
+    private fun acceptsWords(): Boolean {
+        val excluded = generator.conditionalCharacters + upper.flatMap { it.cells }.filter { !it.isLetterCell }
+        return upper.isNotEmpty() &&
             upper.toSet().size == upper.size &&
             upper.all { it.cellCount > 1 } &&
             upper.none { word -> upper.any { it != word && it.containsCells(word) } } &&
-            filler.letters(excluding = excluded) != null
-    if (!acceptable) return false
-    val fitting =
+            generator.filler.letters(excluding = excluded) != null
+    }
+
+    private fun fittingRules(): List<List<WordRule>> =
         upper.indices.map { index ->
-            (if (index < leadingRules.size) listOf(leadingRules[index]) else rules)
+            (if (index < leadingRules.size) listOf(leadingRules[index]) else generator.rules)
                 .flatMap { rule -> rule.startDirections.map { WordRule(listOf(it), rule.turns) } }
-                .filter { it.canFit(upper[index].cellCount, columns, maxRows) }
+                .filter { it.canFit(upper[index].cellCount, generator.columns, generator.maxRows) }
         }
-    if (!fitting.all { it.isNotEmpty() }) return false
-    val maximum = maxWordsPerDirection
-    if (maximum != null) {
+
+    private fun spreads(fitting: List<List<WordRule>>): Boolean {
+        val maximum = generator.maxWordsPerDirection ?: return true
         val possible = fitting.map { rules -> rules.map { it.startDirections[0] }.toSet() }
         val directions = possible.flatten().toSet()
-        val spread =
-            (upper.size - 1) / maximum < directions.size &&
-                directions.all { direction -> possible.count { it == setOf(direction) } <= maximum }
-        if (!spread) return false
+        return (upper.size - 1) / maximum < directions.size &&
+            directions.all { direction -> possible.count { it == setOf(direction) } <= maximum }
     }
-    val mustStand = fitting.count { rules -> rules.all { it.startDirections[0].isVertical } }
-    val canStand = fitting.count { rules -> rules.any { it.startDirections[0].isVertical } }
-    return mustStand <= downWords.last && canStand >= downWords.first
+
+    private fun standsUp(fitting: List<List<WordRule>>): Boolean {
+        val mustStand = fitting.count { rules -> rules.all { it.startDirections[0].isVertical } }
+        val canStand = fitting.count { rules -> rules.any { it.startDirections[0].isVertical } }
+        return mustStand <= generator.downWords.last && canStand >= generator.downWords.first
+    }
 }
 
 internal fun BoardGenerator.packedRequest(
@@ -47,18 +63,34 @@ internal fun BoardGenerator.packedRequest(
     maxRows: Int,
 ): BoardRequest {
     if (!accepts(words, leadingRules)) throw BoardGenerator.Failure.NoRoom(words, columns, rows)
-    if (this.maxRows == null) return growingRequest(words, firstDirection, leadingRules, maxRows)
-    var unsettled = false
-    for (height in rows..maxRows) {
-        when (val outcome = packing(height, leadingRules, words).pack(words, BoardGenerator.LAYOUT_SEED)) {
-            is PathPacking.Outcome.Placed ->
-                return BoardRequest(words, firstDirection, this, leadingRules, Layout(height, outcome.placements))
-            PathPacking.Outcome.Impossible -> continue
-            PathPacking.Outcome.Undetermined -> unsettled = true
-        }
+    return if (this.maxRows == null) {
+        growingRequest(words, firstDirection, leadingRules, maxRows)
+    } else {
+        boundedRequest(words, firstDirection, leadingRules, maxRows)
     }
-    if (unsettled) throw BoardGenerator.Failure.Unsettled(words, columns, maxRows)
-    throw BoardGenerator.Failure.NoRoom(words, columns, rows)
+}
+
+private fun BoardGenerator.boundedRequest(
+    words: List<String>,
+    firstDirection: Direction?,
+    leadingRules: List<WordRule>,
+    maxRows: Int,
+): BoardRequest {
+    var unsettled = false
+    val layout =
+        (rows..maxRows).asSequence().firstNotNullOfOrNull { height ->
+            when (val outcome = packing(height, leadingRules, words).pack(words, BoardGenerator.LAYOUT_SEED)) {
+                is PathPacking.Outcome.Placed -> Layout(height, outcome.placements)
+                PathPacking.Outcome.Impossible -> null
+                PathPacking.Outcome.Undetermined -> null.also { unsettled = true }
+            }
+        }
+    return layout?.let { BoardRequest(words, firstDirection, this, leadingRules, it) }
+        ?: throw if (unsettled) {
+            BoardGenerator.Failure.Unsettled(words, columns, maxRows)
+        } else {
+            BoardGenerator.Failure.NoRoom(words, columns, rows)
+        }
 }
 
 private fun BoardGenerator.growingRequest(
@@ -92,10 +124,14 @@ internal fun BoardGenerator.packedLayout(
     seed: ULong,
 ): Layout {
     val layout = request.layout
-    if (seed == BoardGenerator.LAYOUT_SEED) return layout
-    val outcome = packing(layout.rows, request.leadingRules, request.words).pack(request.words, seed)
-    val placed = outcome as? PathPacking.Outcome.Placed ?: return layout
-    return Layout(layout.rows, placed.placements)
+    val placed =
+        if (seed == BoardGenerator.LAYOUT_SEED) {
+            null
+        } else {
+            packing(layout.rows, request.leadingRules, request.words).pack(request.words, seed) as?
+                PathPacking.Outcome.Placed
+        }
+    return placed?.let { Layout(layout.rows, it.placements) } ?: layout
 }
 
 private fun BoardGenerator.requiredSymbols(words: List<String>): Set<String> {
@@ -119,7 +155,14 @@ private fun BoardGenerator.packing(
         leadingRules = leadingRules,
         downWords = downWords,
         maxWordsPerDirection = maxWordsPerDirection,
-        nodeLimit = if (maxRows == null) BoardGenerator.growingHeightNodeLimit else Generation.settings.packing.nodeLimit,
+        nodeLimit =
+            if (maxRows ==
+                null
+            ) {
+                BoardGenerator.growingHeightNodeLimit
+            } else {
+                Generation.settings.packing.nodeLimit
+            },
         forbidsRuns = avoidsRuns,
         completes = { placements, budget ->
             val layout = Layout(height, placements)

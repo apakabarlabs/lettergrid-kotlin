@@ -70,14 +70,16 @@ internal class RunFreeFill(
         val symbols = conditionalCharacters + board.placements.flatMap { it.word.cells }.filter { !it.isLetterCell }
         val ordinary = weights.letters(excluding = symbols) ?: return null
         val template = template()
-        if (template.required.size > template.empty.size) return null
-        val runs = LetterRuns(board.placements, board.columns, board.rows)
-        if (runs.containsForbiddenRun(template.letters)) return null
+        val runs =
+            LetterRuns(board.placements, board.columns, board.rows).takeIf {
+                template.required.size <= template.empty.size && !it.containsForbiddenRun(template.letters)
+            }
         val random = SeededRandom(seed)
-        for (strategy in listOf(Strategy(avoidsPairs = true), Strategy(avoidsPairs = false))) {
-            search(template, ordinary, runs, strategy, random)?.let { return it }
+        return runs?.let {
+            listOf(true, false).firstNotNullOfOrNull { avoidsPairs ->
+                Search(template, ordinary, runs, Strategy(avoidsPairs), random).run()
+            }
         }
-        return null
     }
 
     private fun template(): Template {
@@ -98,34 +100,48 @@ internal class RunFreeFill(
         )
     }
 
-    private fun search(
-        template: Template,
-        weights: LetterWeights,
-        runs: LetterRuns,
-        strategy: Strategy,
-        random: SeededRandom,
-    ): Board? {
-        val letters = template.letters.map { it.toMutableList() }
-        val targets = FillWordCheck(board, template.targets, rules, template.letters)
-        val order = FillOrder(template, random)
-        val empty = order.cells
-        val frames = mutableListOf<Frame>()
-        var position = 0
-        var completions = 0
-        var remaining = maxOf(1, empty.size) * (weights.letterCount + 1) * stepsPerChoice
-        val neighbours = LetterNeighbours(board.columns, board.rows)
-        while (remaining > 0 || position == empty.size) {
-            if (position == empty.size) {
-                if (completions >= completedCandidates) return null
+    private inner class Search(
+        val template: Template,
+        val weights: LetterWeights,
+        val runs: LetterRuns,
+        val strategy: Strategy,
+        val random: SeededRandom,
+    ) {
+        private val letters = template.letters.map { it.toMutableList() }
+        private val targets = FillWordCheck(board, template.targets, rules, template.letters)
+        private val order = FillOrder(template, random)
+        private val empty = order.cells
+        private val frames = mutableListOf<Frame>()
+        private val neighbours = LetterNeighbours(board.columns, board.rows)
+        private var position = 0
+        private var completions = 0
+        private var remaining = maxOf(1, empty.size) * (weights.letterCount + 1) * stepsPerChoice
+        private var result: Board? = null
+        private var finished = false
+
+        fun run(): Board? {
+            while (!finished && (remaining > 0 || position == empty.size)) {
+                if (position == empty.size) complete() else advance()
+            }
+            return result
+        }
+
+        private fun complete() {
+            if (completions >= completedCandidates) {
+                finished = true
+            } else {
                 completions += 1
                 val candidate = completed(letters)
-                if (readsTargetsOnce(candidate)) return candidate
-                if (position <= 0) return null
-                position -= 1
-                val cell = empty[position]
-                letters[cell.row][cell.column] = null
-                continue
+                if (readsTargetsOnce(candidate)) {
+                    result = candidate
+                    finished = true
+                } else {
+                    stepBack()
+                }
             }
+        }
+
+        private fun advance() {
             val cell = empty[position]
             if (frames.size == position) {
                 val counts = neighbours.counts(cell) { letters[it.row][it.column] }
@@ -134,20 +150,28 @@ internal class RunFreeFill(
             }
             val letter = frames[position].take()
             if (letter == null) {
-                letters[cell.row][cell.column] = null
+                clear(cell)
                 frames.removeAt(frames.lastIndex)
-                if (position <= 0) return null
-                position -= 1
-                val previous = empty[position]
-                letters[previous.row][previous.column] = null
-                continue
+                stepBack()
+            } else {
+                remaining -= 1
+                letters[cell.row][cell.column] = letter
+                if (!runs.hasForbiddenRun(cell, letters) && targets.isClean(cell, letters)) position += 1
             }
-            remaining -= 1
-            letters[cell.row][cell.column] = letter
-            if (runs.hasForbiddenRun(cell, letters) || !targets.isClean(cell, letters)) continue
-            position += 1
         }
-        return null
+
+        private fun stepBack() {
+            if (position <= 0) {
+                finished = true
+            } else {
+                position -= 1
+                clear(empty[position])
+            }
+        }
+
+        private fun clear(cell: Cell) {
+            letters[cell.row][cell.column] = null
+        }
     }
 
     private fun choices(
@@ -155,9 +179,16 @@ internal class RunFreeFill(
         weights: LetterWeights,
         neighbours: Map<String, Int>,
         random: SeededRandom,
+    ): List<String> =
+        if (demand.missing.size > demand.remaining) emptyList() else ordered(demand, weights, neighbours, random)
+
+    private fun ordered(
+        demand: CopyDemand,
+        weights: LetterWeights,
+        neighbours: Map<String, Int>,
+        random: SeededRandom,
     ): List<String> {
         val missing = demand.missing
-        if (missing.size > demand.remaining) return emptyList()
         val copies =
             random.shuffled(
                 missing.sortedWith { first, second ->
@@ -177,7 +208,10 @@ internal class RunFreeFill(
         }
     }
 
-    private fun readsTargetsOnce(candidate: Board): Boolean = candidate.placements.all { candidate.hasSingleOccurrence(it.word, rules) }
+    private fun readsTargetsOnce(candidate: Board): Boolean =
+        candidate.placements.all {
+            candidate.hasSingleOccurrence(it.word, rules)
+        }
 
     private fun completed(letters: List<List<String?>>): Board =
         Board(
@@ -226,7 +260,11 @@ internal class LetterRuns(
                 val start = Cell(row, column)
                 for (direction in Direction.lineAxes) {
                     val cells = (0 until 3).map { start.moved(direction, it) }
-                    if (!cells.all { it.row in 0 until rows && it.column in 0 until columns } || cells in triples) continue
+                    if (!cells.all { it.row in 0 until rows && it.column in 0 until columns } ||
+                        cells in triples
+                    ) {
+                        continue
+                    }
                     val triple = Triple(cells[0], cells[1], cells[2])
                     for (cell in cells) indexed.getOrPut(cell) { mutableListOf() } += triple
                 }
@@ -258,7 +296,14 @@ internal fun Board.Companion.targets(
 internal val Board.placementLetters: List<List<String?>>
     get() {
         val occupied = placements.flatMap { it.cells }.toSet()
-        return letters.mapIndexed { row, line -> line.mapIndexed { column, letter -> letter.takeIf { Cell(row, column) in occupied } } }
+        return letters.mapIndexed { row, line ->
+            line.mapIndexed { column, letter ->
+                letter.takeIf {
+                    Cell(row, column) in
+                        occupied
+                }
+            }
+        }
     }
 
 internal val Board.hasAddedEqualPair: Boolean

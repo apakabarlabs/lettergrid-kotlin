@@ -65,7 +65,11 @@ class LetterWeightsTests {
         for (item in cases().shares) {
             val weights = LetterWeights(item.weights, item.sameNeighbour)
             val random = SeededRandom(item.seed.toULong())
-            val hits = (0 until item.draws).count { weights.orderedLetters(random, item.neighbours).first() == item.letter }
+            val hits =
+                (0 until item.draws).count {
+                    weights.orderedLetters(random, item.neighbours).first() ==
+                        item.letter
+                }
             assertTrue(abs(hits.toDouble() / item.draws - item.share) < item.tolerance, item.name)
         }
     }

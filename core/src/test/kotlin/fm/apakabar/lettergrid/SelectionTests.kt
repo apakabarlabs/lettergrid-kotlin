@@ -34,7 +34,12 @@ class SelectionTests {
     fun dragsSelectTheCellsEveryPortAgreesOn() {
         for (item in Fixtures.decode("selections", ListSerializer(Case.serializer()))) {
             val board = Board(item.rows.map { it.cells }, emptyList())
-            val cells = board.selection(Cell(item.from[0], item.from[1]), Cell(item.toward[0], item.toward[1]), item.ways)
+            val cells =
+                board.selection(
+                    Cell(item.from[0], item.from[1]),
+                    Cell(item.toward[0], item.toward[1]),
+                    item.ways,
+                )
             assertEquals(item.text, board.text(cells), item.name)
         }
     }

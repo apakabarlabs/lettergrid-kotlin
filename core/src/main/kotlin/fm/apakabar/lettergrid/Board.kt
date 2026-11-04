@@ -90,11 +90,7 @@ class Board private constructor(
     val rows: Int = letters.size
 
     init {
-        try {
-            validate()
-        } catch (failure: Failure) {
-            refuse(failure)
-        }
+        failure()?.let(refuse)
     }
 
     constructor(letters: List<List<String>>, placements: List<Placement>) : this(letters, placements, { failure ->
@@ -108,12 +104,21 @@ class Board private constructor(
             placement.cells.all(::contains) &&
             PathGeometry(placement.cells) != null
 
-    private fun validate() {
-        if (!(letters.isEmpty() || (columns > 0 && letters.all { it.size == columns }))) throw Failure.IrregularRows
+    private fun failure(): Failure? {
+        val regular = letters.isEmpty() || (columns > 0 && letters.all { it.size == columns })
         val words = mutableSetOf<String>()
-        for (placement in placements) {
-            if (!words.add(placement.word)) throw Failure.DuplicateWord(placement.word)
-            if (!fits(placement) || text(placement.cells) != placement.word) throw Failure.InvalidPlacement(placement.word)
+        return if (!regular) {
+            Failure.IrregularRows
+        } else {
+            placements.firstNotNullOfOrNull { placement ->
+                when {
+                    !words.add(placement.word) -> Failure.DuplicateWord(placement.word)
+                    !fits(
+                        placement,
+                    ) || text(placement.cells) != placement.word -> Failure.InvalidPlacement(placement.word)
+                    else -> null
+                }
+            }
         }
     }
 
@@ -129,17 +134,16 @@ class Board private constructor(
     ): Int {
         val length = word.cellCount
         if (length <= 0) return 0
-        val found = mutableSetOf<Set<Cell>>()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                for (direction in along) {
-                    val start = Cell(row, column)
-                    val cells = (0 until length).map { start.moved(direction, it) }
-                    if (cells.all(::contains) && text(cells) == word) found += cells.toSet()
-                }
+        val starts = (0 until rows).flatMap { row -> (0 until columns).map { Cell(row, it) } }
+        val readings =
+            starts.flatMap { start ->
+                along.map { direction -> (0 until length).map { start.moved(direction, it) } }
             }
-        }
-        return found.size
+        return readings
+            .filter { cells -> cells.all(::contains) && text(cells) == word }
+            .map { it.toSet() }
+            .toSet()
+            .size
     }
 
     fun selection(
@@ -147,29 +151,44 @@ class Board private constructor(
         toward: Cell,
         along: List<Direction>,
     ): List<Cell> {
-        if (!contains(from)) return emptyList()
-        val row = toward.row.toDouble() - from.row.toDouble()
-        val column = toward.column.toDouble() - from.column.toDouble()
-        val reach =
-            along.map { way ->
-                val length = (way.rowStep * way.rowStep + way.columnStep * way.columnStep).toDouble()
-                val projection = row * way.rowStep + column * way.columnStep
-                Reach(way, projection / sqrt(length), projection / length)
+        val best = if (contains(from)) bestReach(from, toward, along) else null
+        return when {
+            !contains(from) -> emptyList()
+            best == null -> listOf(from)
+            else -> {
+                val nearest = floor(best.distance + HALF_CELL)
+                val distance = minOf((maxOf(rows, columns) - 1).toDouble(), nearest).toInt()
+                (0..distance).map { from.moved(best.way, it) }.takeWhile(::contains)
             }
-        val aligned = reach.filter { it.alignment > 0 }
-        val closest = aligned.maxOfOrNull { it.alignment } ?: return listOf(from)
-        val best = aligned.first { it.alignment == closest }
-        if (along.any { it.isDiagonal }) {
-            val travelSquared = row * row + column * column
-            val snap = Generation.settings.selection.diagonalSnapCosineSquared
-            if (best.alignment * best.alignment < snap * travelSquared) return listOf(from)
         }
-        val nearest = floor(best.distance + 0.5)
-        val distance = minOf((maxOf(rows, columns) - 1).toDouble(), nearest).toInt()
-        return (0..distance).map { from.moved(best.way, it) }.takeWhile(::contains)
     }
 
-    override fun equals(other: Any?): Boolean = other is Board && other.letters == letters && other.placements == placements
+    private fun bestReach(
+        from: Cell,
+        toward: Cell,
+        along: List<Direction>,
+    ): Reach? {
+        val row = toward.row.toDouble() - from.row.toDouble()
+        val column = toward.column.toDouble() - from.column.toDouble()
+        val aligned =
+            along
+                .map { way ->
+                    val length = (way.rowStep * way.rowStep + way.columnStep * way.columnStep).toDouble()
+                    val projection = row * way.rowStep + column * way.columnStep
+                    Reach(way, projection / sqrt(length), projection / length)
+                }.filter { it.alignment > 0 }
+        val closest = aligned.maxOfOrNull { it.alignment }
+        val best = aligned.firstOrNull { it.alignment == closest }
+        val snap = Generation.settings.selection.diagonalSnapCosineSquared
+        val snapsBack =
+            best != null &&
+                along.any { it.isDiagonal } &&
+                best.alignment * best.alignment < snap * (row * row + column * column)
+        return best.takeUnless { snapsBack }
+    }
+
+    override fun equals(other: Any?): Boolean =
+        other is Board && other.letters == letters && other.placements == placements
 
     override fun hashCode(): Int = 31 * letters.hashCode() + placements.hashCode()
 
@@ -180,6 +199,8 @@ class Board private constructor(
     )
 
     companion object {
+        private const val HALF_CELL = 0.5
+
         fun validating(
             letters: List<List<String>>,
             placements: List<Placement>,

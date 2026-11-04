@@ -93,44 +93,52 @@ class RepeatedLettersTests {
                 val board = request.board(seed)
                 val signature = board.letters.joinToString("/") { it.joinToString("") }
                 signatures[signature] = (signatures[signature] ?: 0) + 1
-                assertFalse(hasAddedRun(board), "${item.name}, seed $seed")
-                if (item.avoidsPairs == true) {
-                    for (row in 0 until board.rows) {
-                        for (column in 0 until board.columns) {
-                            val cell = Cell(row, column)
-                            for (direction in Direction.entries) {
-                                val next = Cell(row + direction.rowStep, column + direction.columnStep)
-                                if (board.contains(next)) assertNotEquals(board[cell], board[next], item.name)
-                            }
-                        }
-                    }
-                }
-                for (word in item.words) assertEquals(1, board.occurrences(word, rules = rules))
+                check(board, item, rules, seed)
             }
             val peak = signatures.values.maxOrNull() ?: 0
             assertTrue(signatures.size > 1, "${item.name}: ${signatures.size}/64 fields; peak $peak/64")
         }
     }
 
-    private fun hasAddedRun(board: Board): Boolean {
-        for (row in 0 until board.rows) {
-            for (column in 0 until board.columns) {
-                for (direction in Direction.entries) {
-                    val cells = (0 until 3).map { Cell(row + direction.rowStep * it, column + direction.columnStep * it) }
-                    if (!cells.all(board::contains) || cells.map { board[it] }.toSet().size != 1) continue
-                    val belongsToWord =
-                        board.placements.any { placement ->
-                            placement.cells.size >= 3 &&
-                                (0..(placement.cells.size - 3)).any { start ->
-                                    val wordCells = placement.cells.subList(start, start + 3)
-                                    wordCells == cells || wordCells.asReversed() == cells
-                                }
-                        }
-                    if (!belongsToWord) return true
-                }
-            }
+    private fun check(
+        board: Board,
+        item: Case,
+        rules: List<WordRule>,
+        seed: ULong,
+    ) {
+        assertFalse(hasAddedRun(board), "${item.name}, seed $seed")
+        if (item.avoidsPairs == true) {
+            for ((cell, next) in neighbourPairs(board)) assertNotEquals(board[cell], board[next], item.name)
         }
-        return false
+        for (word in item.words) assertEquals(1, board.occurrences(word, rules = rules))
+    }
+
+    private fun cells(board: Board): List<Cell> =
+        (0 until board.rows).flatMap { row -> (0 until board.columns).map { Cell(row, it) } }
+
+    private fun neighbourPairs(board: Board): List<Pair<Cell, Cell>> =
+        cells(board).flatMap { cell ->
+            Direction.entries
+                .map { cell to Cell(cell.row + it.rowStep, cell.column + it.columnStep) }
+                .filter { (_, next) -> board.contains(next) }
+        }
+
+    private fun hasAddedRun(board: Board): Boolean {
+        val runs =
+            cells(board).flatMap { start ->
+                Direction.entries.map { direction -> (0 until 3).map { start.moved(direction, it) } }
+            }
+        return runs.any { cells ->
+            cells.all(board::contains) &&
+                cells.map { board[it] }.toSet().size == 1 &&
+                board.placements.none { placement ->
+                    placement.cells.size >= 3 &&
+                        (0..(placement.cells.size - 3)).any { start ->
+                            val wordCells = placement.cells.subList(start, start + 3)
+                            wordCells == cells || wordCells.asReversed() == cells
+                        }
+                }
+        }
     }
 
     companion object {

@@ -37,9 +37,23 @@ class PlacementCheckTests {
             val filler = LetterWeights(weights)
             val quota = downWords[0]..downWords[1]
             if (rules != null) {
-                return BoardGenerator(columns, rows, maxRows, rules = rules.map { it.value }, filler = filler, downWords = quota)
+                return BoardGenerator(
+                    columns,
+                    rows,
+                    maxRows,
+                    rules = rules.map { it.value },
+                    filler = filler,
+                    downWords = quota,
+                )
             }
-            return BoardGenerator(columns, rows, maxRows, directions = checkNotNull(directions), filler = filler, downWords = quota)
+            return BoardGenerator(
+                columns,
+                rows,
+                maxRows,
+                directions = checkNotNull(directions),
+                filler = filler,
+                downWords = quota,
+            )
         }
 
         fun check(generator: BoardGenerator) {
@@ -60,7 +74,12 @@ class PlacementCheckTests {
         fun failure(outcome: String): BoardGenerator.Failure =
             when (outcome) {
                 "invalidConfiguration" -> BoardGenerator.Failure.InvalidConfiguration
-                "unsettled" -> BoardGenerator.Failure.Unsettled(words.map { it.cellUppercased }, columns, maxRows ?: rows)
+                "unsettled" ->
+                    BoardGenerator.Failure.Unsettled(
+                        words.map { it.cellUppercased },
+                        columns,
+                        maxRows ?: rows,
+                    )
                 else -> BoardGenerator.Failure.NoRoom(words.map { it.cellUppercased }, columns, rows)
             }
     }
@@ -79,7 +98,11 @@ class PlacementCheckTests {
             if (item.request == "prepared") {
                 val request = item.prepare(generator)
                 for (seed in 0uL..2uL) {
-                    assertEquals(item.words.map { it.cellUppercased }, request.board(seed).placements.map { it.word }, item.name)
+                    assertEquals(
+                        item.words.map { it.cellUppercased },
+                        request.board(seed).placements.map { it.word },
+                        item.name,
+                    )
                 }
             } else {
                 val failure = assertFailsWith<BoardGenerator.Failure>(item.name) { item.prepare(generator) }

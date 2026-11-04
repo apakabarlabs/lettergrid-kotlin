@@ -29,17 +29,20 @@ internal class FillWordCheck(
         filling: Cell,
         letters: List<List<String?>>,
     ): Boolean {
-        if (index.longest <= 0) return true
-        val directions = directions ?: return isClean(board, index, rules, letters)
-        if (!fixedIsClean) return false
-        for (direction in directions) {
-            for (distance in 0 until index.longest) {
-                val start = filling.moved(direction, -distance)
-                if (!board.contains(start)) break
-                if (!isClean(start, direction, distance, letters)) return false
-            }
+        val directions = directions
+        return when {
+            index.longest <= 0 -> true
+            directions == null -> isClean(board, index, rules, letters)
+            !fixedIsClean -> false
+            else ->
+                directions.all { direction ->
+                    (0 until index.longest)
+                        .asSequence()
+                        .map { distance -> filling.moved(direction, -distance) to distance }
+                        .takeWhile { (start, _) -> board.contains(start) }
+                        .all { (start, distance) -> isClean(start, direction, distance, letters) }
+                }
         }
-        return true
     }
 
     private fun isClean(
@@ -51,16 +54,16 @@ internal class FillWordCheck(
         var cell = start
         var node: Int? = 0
         var length = 0
-        while (board.contains(cell)) {
-            val letter = letters[cell.row][cell.column] ?: break
-            node = index.next(after = node, letter = letter)
-            if (node == null) break
+        var clean = true
+        while (clean && length < index.longest) {
+            val letter = cell.takeIf(board::contains)?.let { letters[it.row][it.column] }
+            val next = letter?.let { index.next(after = node, letter = it) } ?: break
+            node = next
             length += 1
-            if (length > through && index.word(at = node) != null) return false
-            if (length >= index.longest) break
+            clean = length <= through || index.word(at = next) == null
             cell = cell.moved(direction, 1)
         }
-        return true
+        return clean
     }
 
     private companion object {
@@ -78,15 +81,16 @@ internal class FillWordCheck(
             directions: List<Direction>,
             longest: Int,
         ): Boolean {
-            if (longest <= 0 || directions.isEmpty()) return true
-            if (board.rows <= 0 || board.columns <= 0) return false
-            var available = NoiseSearch.maximumVisits
             val longestLine = minOf(longest, maxOf(board.rows, board.columns))
-            for (factor in listOf(board.rows, board.columns, directions.size, longestLine)) {
-                if (factor > available) return false
-                available /= factor
+            val factors = listOf(board.rows, board.columns, directions.size, longestLine)
+            return when {
+                longest <= 0 || directions.isEmpty() -> true
+                board.rows <= 0 || board.columns <= 0 -> false
+                else ->
+                    factors.fold(NoiseSearch.maximumVisits as Int?) { available, factor ->
+                        available?.takeIf { factor <= it }?.div(factor)
+                    } != null
             }
-            return true
         }
     }
 }

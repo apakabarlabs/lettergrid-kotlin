@@ -28,7 +28,13 @@ class DirectionLimitTests {
         val rejected = initial.placements[0].cells
         val retrying =
             packing.copy(completes = { placements, _ ->
-                if (placements[0].cells == rejected) PathPacking.Completion.DOES_NOT_FIT else PathPacking.Completion.FITS
+                if (placements[0].cells ==
+                    rejected
+                ) {
+                    PathPacking.Completion.DOES_NOT_FIT
+                } else {
+                    PathPacking.Completion.FITS
+                }
             })
         val retried =
             assertIs<PathPacking.Outcome.Placed>(
@@ -50,7 +56,14 @@ class DirectionLimitTests {
         val words = listOf("PLANE", "ORBIT", "DUSKY")
         for (maximumRows in listOf(7, null)) {
             val generator =
-                BoardGenerator(columns = 7, rows = 7, maxRows = maximumRows, rules = rules, filler = filler, maxWordsPerDirection = 2)
+                BoardGenerator(
+                    columns = 7,
+                    rows = 7,
+                    maxRows = maximumRows,
+                    rules = rules,
+                    filler = filler,
+                    maxWordsPerDirection = 2,
+                )
             generator.checkPlacement(words, leadingRules = leading)
             val request = generator.placementRequest(words, leading)
             for (seed in 0uL..2uL) {
@@ -88,8 +101,10 @@ class DirectionLimitTests {
     fun aLimitChangesRequestIdentityWithoutChangingUnlimitedDefaults() {
         val directions = listOf(Direction.RIGHT, Direction.DOWN)
         val unlimited = BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler)
-        val explicitNil = BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler, maxWordsPerDirection = null)
-        val limited = BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler, maxWordsPerDirection = 2)
+        val explicitNil =
+            BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler, maxWordsPerDirection = null)
+        val limited =
+            BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler, maxWordsPerDirection = 2)
         assertEquals(unlimited, explicitNil)
         assertNotEquals(unlimited, limited)
         val words = listOf("CAT", "DOG", "SUN")

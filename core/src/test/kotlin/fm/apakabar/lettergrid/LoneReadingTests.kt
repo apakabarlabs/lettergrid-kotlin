@@ -40,21 +40,15 @@ class LoneReadingTests {
     fun aLonePlacementReadsOnceExactlyWhenTheBoardSearchSaysSo(turns: Int) {
         val rules = rules(turns)
         val random = SeededRandom(turns.toULong())
-        var compared = 0
-        for (length in 4..9) {
-            for (rule in rules.filter { it.turns == turns }) {
-                for (direction in rule.startDirections) {
-                    for (shape in shapes(length, direction, turns)) {
-                        val word = word(length, random)
-                        val placement = Placement(word, shape)
-                        val expected = board(placement).hasSingleOccurrence(word, rules)
-                        assertEquals(expected, placement.readsOnceAlone(rules), "$word along $shape with $turns turns")
-                        compared += 1
-                    }
-                }
-            }
+        val directions = rules.filter { it.turns == turns }.flatMap { it.startDirections }
+        val shapes = (4..9).flatMap { length -> directions.flatMap { shapes(length, it, turns) } }
+        for (shape in shapes) {
+            val word = word(shape.size, random)
+            val placement = Placement(word, shape)
+            val expected = board(placement).hasSingleOccurrence(word, rules)
+            assertEquals(expected, placement.readsOnceAlone(rules), "$word along $shape with $turns turns")
         }
-        assertTrue(compared >= Direction.entries.size * (4..7).count())
+        assertTrue(shapes.size >= Direction.entries.size * (4..7).count())
     }
 
     @ParameterizedTest
@@ -63,24 +57,20 @@ class LoneReadingTests {
         val rules = rules(turns)
         val random = SeededRandom(turns.toULong() + 10uL)
         var held = 0
-        var compared = 0
-        for (length in 4..9) {
-            for (direction in Direction.entries) {
-                for (shape in shapes(length, direction, turns)) {
-                    val word = word(length, random)
-                    val other = word(random.nextInt(below = 3) + 2, random)
-                    val placement = Placement(word, shape)
-                    val expected = PathSearch(board(placement), rules).readings(WordIndex(setOf(other))).isNotEmpty()
-                    assertEquals(
-                        expected,
-                        placement.holdsReading(other, rules),
-                        "$other in $word along $shape with $turns turns",
-                    )
-                    if (expected) held += 1
-                    compared += 1
-                }
-            }
+        val shapes = (4..9).flatMap { length -> Direction.entries.flatMap { shapes(length, it, turns) } }
+        for (shape in shapes) {
+            val word = word(shape.size, random)
+            val other = word(random.nextInt(below = 3) + 2, random)
+            val placement = Placement(word, shape)
+            val expected = PathSearch(board(placement), rules).readings(WordIndex(setOf(other))).isNotEmpty()
+            assertEquals(
+                expected,
+                placement.holdsReading(other, rules),
+                "$other in $word along $shape with $turns turns",
+            )
+            if (expected) held += 1
         }
+        val compared = shapes.size
         assertTrue(held in 1 until compared)
     }
 

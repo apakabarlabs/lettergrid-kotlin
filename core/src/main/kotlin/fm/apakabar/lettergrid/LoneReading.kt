@@ -44,30 +44,33 @@ private class LoneReading(
         path += index
         used[index] = true
         try {
-            if (path.size >= target.size) {
-                read(path.map { cells[it] })
-                return
-            }
-            val letter = target[path.size]
-            for (next in cells.indices) {
-                if (!searching || used[next] || letters[next] != letter) continue
-                if (Direction.between(cells[index], cells[next]) == null) continue
-                walk(next)
-            }
+            if (path.size >= target.size) read(path.map { cells[it] }) else continueFrom(index)
         } finally {
             path.removeAt(path.lastIndex)
             used[index] = false
         }
     }
 
+    private fun continueFrom(index: Int) {
+        val letter = target[path.size]
+        for (next in cells.indices) {
+            val follows =
+                searching &&
+                    !used[next] &&
+                    letters[next] == letter &&
+                    Direction.between(cells[index], cells[next]) != null
+            if (follows) walk(next)
+        }
+    }
+
     private fun read(reading: List<Cell>) {
-        val geometry = PathGeometry(reading) ?: return
-        if (rules.none { it.matches(geometry) }) return
+        val geometry = PathGeometry(reading)
+        if (geometry == null || rules.none { it.matches(geometry) }) return
         val first = first
         if (first == null) {
             this.first = reading
-            return
+        } else {
+            single = reading == first || (palindrome && reading == first.asReversed())
         }
-        single = reading == first || (palindrome && reading == first.asReversed())
     }
 }

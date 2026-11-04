@@ -1,7 +1,13 @@
 package fm.apakabar.lettergrid
 
+private const val PRIVATE_USE_FIRST = 0xE000
+private const val PRIVATE_USE_LAST = 0xF8FF
+
 internal fun String.Companion.privateUse(avoiding: Set<String>): String? =
-    (0xE000..0xF8FF).asSequence().map { String(Character.toChars(it)) }.firstOrNull { it !in avoiding }
+    (PRIVATE_USE_FIRST..PRIVATE_USE_LAST)
+        .asSequence()
+        .map { String(Character.toChars(it)) }
+        .firstOrNull { it !in avoiding }
 
 internal fun Iterable<Placement>.letters(
     columns: Int,

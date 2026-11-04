@@ -8,12 +8,12 @@ class SleepInterval private constructor(
     val duration: Duration,
 ) {
     companion object {
-        operator fun invoke(seconds: Double): SleepInterval? {
-            if (!seconds.isFinite() || seconds <= 0 || seconds >= Long.MAX_VALUE.toDouble()) return null
-            val duration = seconds.seconds
-            if (duration <= Duration.ZERO) return null
-            return SleepInterval(seconds, duration)
-        }
+        operator fun invoke(seconds: Double): SleepInterval? =
+            seconds
+                .takeIf { it.isFinite() && it > 0 && it < Long.MAX_VALUE.toDouble() }
+                ?.seconds
+                ?.takeIf { it > Duration.ZERO }
+                ?.let { SleepInterval(seconds, it) }
 
         fun enforcing(seconds: Double): SleepInterval =
             checkNotNull(invoke(seconds)) { "Sleep seconds must be a positive, representable duration" }

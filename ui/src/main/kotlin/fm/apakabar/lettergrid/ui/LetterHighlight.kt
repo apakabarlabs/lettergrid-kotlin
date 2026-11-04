@@ -36,7 +36,7 @@ fun LetterHighlight(
         val side = cellSize.toPx()
         val thickness = side * THICKNESS
 
-        fun center(cell: Cell) = Offset((cell.column + 0.5f) * side, (cell.row + 0.5f) * side)
+        fun center(cell: Cell) = Offset((cell.column + HALF_CELL) * side, (cell.row + HALF_CELL) * side)
         if (cells.all { it == first }) {
             drawCircle(color, radius = thickness / 2, center = center(first))
         } else {
@@ -55,3 +55,4 @@ fun LetterHighlight(
 }
 
 private const val THICKNESS = 0.84f
+private const val HALF_CELL = 0.5f

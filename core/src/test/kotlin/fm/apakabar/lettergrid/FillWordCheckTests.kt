@@ -62,7 +62,15 @@ class FillWordCheckTests {
         val check = FillWordCheck(board, index, rules, letters.map { it.toList() })
         val empty =
             (0 until board.rows).flatMap { row ->
-                (0 until board.columns).mapNotNull { column -> if (letters[row][column] == null) Cell(row, column) else null }
+                (0 until board.columns).mapNotNull { column ->
+                    if (letters[row][column] ==
+                        null
+                    ) {
+                        Cell(row, column)
+                    } else {
+                        null
+                    }
+                }
             }
         val random = SeededRandom(37uL)
         var position = 0
@@ -75,7 +83,8 @@ class FillWordCheckTests {
             }
             val cell = empty[position]
             letters[cell.row][cell.column] = random.pick(candidates)
-            val expected = board.strayWordCount(index, rules, lessThan = 1, letters = { letters[it.row][it.column] }) == 0
+            val expected =
+                board.strayWordCount(index, rules, lessThan = 1, letters = { letters[it.row][it.column] }) == 0
             assertEquals(expected, check.isClean(cell, letters))
             if (expected) position += 1 else letters[cell.row][cell.column] = null
         }

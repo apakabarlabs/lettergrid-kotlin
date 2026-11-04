@@ -34,7 +34,8 @@ class FixtureCopyTests {
         assertEquals(
             SHARED.toSet(),
             Fixtures.copied(),
-            "the copied fixtures differ from the list of shared ones: run `make sync-yaml` in lettergrid-swift and update the list",
+            "the copied fixtures differ from the list of shared ones: " +
+                "run `make sync-yaml` in lettergrid-swift and update the list",
         )
     }
 
@@ -47,7 +48,9 @@ class FixtureCopyTests {
         } +
             DynamicTest.dynamicTest(GENERATION) {
                 val local =
-                    checkNotNull(javaClass.getResourceAsStream("/fm/apakabar/lettergrid/$GENERATION")).use { it.readBytes() }
+                    checkNotNull(
+                        javaClass.getResourceAsStream("/fm/apakabar/lettergrid/$GENERATION"),
+                    ).use { it.readBytes() }
                 assertContentEquals(fetch("Sources/LetterGrid/$GENERATION"), local, differs(GENERATION))
             }
 

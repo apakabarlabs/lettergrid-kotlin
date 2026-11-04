@@ -26,25 +26,28 @@ class Countdown(
         tick: () -> Unit,
     ) {
         val interval = SleepInterval(secondsPerLetter) ?: throw Failure.InvalidInterval
-        while (round.phase == Round.Phase.INTRODUCING) {
+        repeatWhile(interval, { round.phase == Round.Phase.INTRODUCING }, { round.introduced }, introduce) {
+            Failure.NoIntroductionProgress
+        }
+        val clocked = { round.phase == Round.Phase.PLAYING && round.secondsLeft != null }
+        repeatWhile(SleepInterval.enforcing(1.0), clocked, { round.secondsLeft }, tick) { Failure.NoClockProgress }
+    }
+
+    private suspend fun repeatWhile(
+        interval: SleepInterval,
+        running: () -> Boolean,
+        state: () -> Any?,
+        step: () -> Unit,
+        stalled: () -> Failure,
+    ) {
+        while (running()) {
             currentCoroutineContext().ensureActive()
             sleep(interval.duration)
             currentCoroutineContext().ensureActive()
-            if (round.phase != Round.Phase.INTRODUCING) break
-            val before = round.introduced
-            introduce()
-            if (round.phase == Round.Phase.INTRODUCING && round.introduced == before) {
-                throw Failure.NoIntroductionProgress
-            }
-        }
-        while (round.phase == Round.Phase.PLAYING && round.secondsLeft != null) {
-            currentCoroutineContext().ensureActive()
-            sleep(1.seconds)
-            currentCoroutineContext().ensureActive()
-            if (round.phase != Round.Phase.PLAYING || round.secondsLeft == null) break
-            val before = round.secondsLeft
-            tick()
-            if (round.phase == Round.Phase.PLAYING && round.secondsLeft == before) throw Failure.NoClockProgress
+            if (!running()) break
+            val before = state()
+            step()
+            if (running() && state() == before) throw stalled()
         }
     }
 }

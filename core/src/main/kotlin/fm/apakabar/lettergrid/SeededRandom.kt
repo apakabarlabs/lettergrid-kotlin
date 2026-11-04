@@ -6,11 +6,11 @@ class SeededRandom(
     private var state: ULong = seed
 
     fun next(): ULong {
-        state += 0x9E3779B97F4A7C15uL
+        state += GOLDEN_GAMMA
         var value = state
-        value = (value xor (value shr 30)) * 0xBF58476D1CE4E5B9uL
-        value = (value xor (value shr 27)) * 0x94D049BB133111EBuL
-        return value xor (value shr 31)
+        value = (value xor (value shr FIRST_SHIFT)) * FIRST_MIX
+        value = (value xor (value shr SECOND_SHIFT)) * SECOND_MIX
+        return value xor (value shr FINAL_SHIFT)
     }
 
     fun nextLong(below: Long): Long {
@@ -35,7 +35,7 @@ class SeededRandom(
     fun nextDouble(below: Double): Double {
         require(below > 0 && below.isFinite()) { "An upper bound must be positive and finite" }
         while (true) {
-            val unit = (next() and ((1uL shl 53) - 1uL)).toDouble() * (Math.ulp(1.0) / 2)
+            val unit = (next() and ((1uL shl DOUBLE_SIGNIFICAND_BITS) - 1uL)).toDouble() * (Math.ulp(1.0) / 2)
             val value = below * unit
             if (value != below) return value
         }
@@ -56,9 +56,19 @@ class SeededRandom(
         return result
     }
 
-    fun <Element> pick(elements: List<Element>): Element? = if (elements.isEmpty()) null else elements[nextInt(below = elements.size)]
+    fun <Element> pick(elements: List<Element>): Element? =
+        if (elements.isEmpty()) null else elements[nextInt(below = elements.size)]
 
     private companion object {
+        const val GOLDEN_GAMMA = 0x9E3779B97F4A7C15uL
+        const val FIRST_MIX = 0xBF58476D1CE4E5B9uL
+        const val SECOND_MIX = 0x94D049BB133111EBuL
+        const val FIRST_SHIFT = 30
+        const val SECOND_SHIFT = 27
+        const val FINAL_SHIFT = 31
+        const val DOUBLE_SIGNIFICAND_BITS = 53
+        const val SIGN_SHIFT = Long.SIZE_BITS - 1
+
         fun unsignedMultiplyHigh(
             first: ULong,
             second: ULong,
@@ -66,7 +76,7 @@ class SeededRandom(
             val a = first.toLong()
             val b = second.toLong()
             val signed = Math.multiplyHigh(a, b)
-            return (signed + ((a shr 63) and b) + ((b shr 63) and a)).toULong()
+            return (signed + ((a shr SIGN_SHIFT) and b) + ((b shr SIGN_SHIFT) and a)).toULong()
         }
     }
 }

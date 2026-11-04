@@ -123,7 +123,8 @@ class LetterWeights private constructor(
     }
 
     override fun equals(other: Any?): Boolean =
-        other is LetterWeights && other.letters == letters && other.weights == weights && other.sameNeighbour == sameNeighbour
+        other is LetterWeights && other.letters == letters && other.weights == weights &&
+            other.sameNeighbour == sameNeighbour
 
     override fun hashCode(): Int = (letters.hashCode() * 31 + weights.hashCode()) * 31 + sameNeighbour.hashCode()
 
@@ -132,27 +133,37 @@ class LetterWeights private constructor(
             weights: Map<String, Double>,
             sameNeighbour: Double,
         ): LetterWeights {
-            if (weights.isEmpty()) throw Failure.Empty
-            if (!(sameNeighbour > 0 && sameNeighbour <= 1)) throw Failure.SameNeighbourOutsideFraction(sameNeighbour)
-            val letters = mutableListOf<String>()
-            val orderedWeights = mutableListOf<Double>()
             val sorted = weights.entries.sortedWith { first, second -> codePointOrder(first.key, second.key) }
-            for ((key, weight) in sorted) {
-                val letter = key.takeIf { it.cellCount == 1 }?.cellUppercased
-                if (letter == null || !letter.isLetterCell) throw Failure.NotALetter(key)
-                if (!weight.isFinite()) throw Failure.NotFinite(key)
-                if (weight <= 0) throw Failure.NotPositive(key)
-                val index = letters.indexOf(letter)
-                if (index >= 0) {
-                    orderedWeights[index] += weight
-                    if (!orderedWeights[index].isFinite()) throw Failure.NotFinite(key)
-                } else {
-                    letters += letter
-                    orderedWeights += weight
+            val sums = linkedMapOf<String, Double>()
+            val failure =
+                when {
+                    weights.isEmpty() -> Failure.Empty
+                    !(sameNeighbour > 0 && sameNeighbour <= 1) -> Failure.SameNeighbourOutsideFraction(sameNeighbour)
+                    else -> sorted.firstNotNullOfOrNull { (key, weight) -> added(key, weight, sums) }
                 }
-            }
+            if (failure != null) throw failure
+            val letters = sums.keys.toList()
             val order = letters.indices.sortedWith { first, second -> codePointOrder(letters[first], letters[second]) }
-            return LetterWeights(order.map { letters[it] }, order.map { orderedWeights[it] }, sameNeighbour)
+            return LetterWeights(order.map { letters[it] }, order.map { sums.getValue(letters[it]) }, sameNeighbour)
+        }
+
+        fun added(
+            key: String,
+            weight: Double,
+            sums: MutableMap<String, Double>,
+        ): Failure? {
+            val letter = key.takeIf { it.cellCount == 1 }?.cellUppercased
+            val sum = letter?.let { (sums[it] ?: 0.0) + weight }
+            val failure =
+                when {
+                    letter == null || !letter.isLetterCell -> Failure.NotALetter(key)
+                    !weight.isFinite() -> Failure.NotFinite(key)
+                    weight <= 0 -> Failure.NotPositive(key)
+                    sum == null || !sum.isFinite() -> Failure.NotFinite(key)
+                    else -> null
+                }
+            if (failure == null && letter != null && sum != null) sums[letter] = sum
+            return failure
         }
 
         fun codePointOrder(

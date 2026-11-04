@@ -21,7 +21,19 @@ class HintCellsTests {
     @Test
     fun findingAWordRemovesItsHintsButKeepsTheCrossingWordHints() {
         val round =
-            Round(board, directions, progress = RoundProgress(found = listOf("CAT"), revealed = mapOf("CAT" to 2, "OAR" to 2)))
+            Round(
+                board,
+                directions,
+                progress =
+                    RoundProgress(
+                        found = listOf("CAT"),
+                        revealed =
+                            mapOf(
+                                "CAT" to 2,
+                                "OAR" to 2,
+                            ),
+                    ),
+            )
         assertEquals(listOf(Cell(0, 1), Cell(1, 1)), round.hintedCells)
     }
 
@@ -34,7 +46,12 @@ class HintCellsTests {
         repeat(word.length - 1) { round.reveal() }
         val before = round.hintedCells
         val restored =
-            Round.restoring(round.progress, board, directions = listOf(Direction.RIGHT), hintOrder = HintOrder.ANY_BUT_FIRST)
+            Round.restoring(
+                round.progress,
+                board,
+                directions = listOf(Direction.RIGHT),
+                hintOrder = HintOrder.ANY_BUT_FIRST,
+            )
         assertEquals(255, before.size)
         assertEquals(placement.cells.drop(1).toSet(), before.toSet())
         assertEquals(before, restored.hintedCells)

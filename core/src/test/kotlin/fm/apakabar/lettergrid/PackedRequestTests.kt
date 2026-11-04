@@ -45,7 +45,8 @@ class PackedRequestTests {
                 generator.request(words, firstRule = firstRule?.wordRule)
             }
 
-        fun legacyRequest(generator: BoardGenerator): BoardRequest = generator.request(words, firstRule = leading.firstOrNull())
+        fun legacyRequest(generator: BoardGenerator): BoardRequest =
+            generator.request(words, firstRule = leading.firstOrNull())
     }
 
     @Test

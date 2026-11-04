@@ -67,14 +67,21 @@ class BandedBoardTests {
                     assertEquals(7, board.columns)
                     assertTrue(board.rows >= 7)
                     assertEquals(request.words, board.placements.map { it.word })
-                    for (word in request.words) assertEquals(1, board.occurrences(word, along = directions), "${request.words}")
+                    for (word in request.words) {
+                        assertEquals(
+                            1,
+                            board.occurrences(word, along = directions),
+                            "${request.words}",
+                        )
+                    }
                     for (placement in board.placements) {
                         assertTrue(placement.direction in directions)
                         assertEquals(placement.word, board.text(placement.cells))
                     }
                     if (first != null) assertEquals(first, board.placements.first().direction)
                     assertTrue(
-                        board.placements.count { it.direction.isVertical } in downWords || directions.none { it.isVertical },
+                        board.placements.count { it.direction.isVertical } in downWords ||
+                            directions.none { it.isVertical },
                     )
                 }
             }
@@ -115,7 +122,11 @@ class BandedBoardTests {
     @Test
     fun downWordsStandSideBySideSoTheBoardIsOnlyAsTallAsTheLongest() {
         val directions = listOf(Direction.RIGHT, Direction.DOWN, Direction.DOWN_RIGHT)
-        val request = generator(directions, 2..2).request(listOf("ABCDEF", "BADCFE", "CAFEBD"), firstDirection = Direction.DOWN_RIGHT)
+        val request =
+            generator(
+                directions,
+                2..2,
+            ).request(listOf("ABCDEF", "BADCFE", "CAFEBD"), firstDirection = Direction.DOWN_RIGHT)
         val board = request.board(7uL)
         assertTrue(board.rows <= 13)
         assertEquals(2, board.placements.count { it.direction == Direction.DOWN })

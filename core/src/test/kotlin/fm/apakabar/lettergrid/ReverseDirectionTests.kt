@@ -31,7 +31,15 @@ class ReverseDirectionTests {
     fun aBoardCanUseEachReverseDirectionReadingEachWordOnce() {
         val words = listOf("CAT", "DOG", "SUN")
         for (direction in reverses) {
-            val generator = BoardGenerator(columns = 7, rows = 7, directions = listOf(direction), filler = filler, downWords = 0..3)
+            val generator =
+                BoardGenerator(
+                    columns = 7,
+                    rows = 7,
+                    directions = listOf(direction),
+                    filler = filler,
+                    downWords =
+                        0..3,
+                )
             val board = generator.board(words, 8uL)
             assertTrue(board.placements.all { it.direction == direction }, "$direction")
             for (placement in board.placements) {
@@ -44,7 +52,14 @@ class ReverseDirectionTests {
     @Test
     fun wordsRunningUpCountTowardTheVerticalQuota() {
         val generator =
-            BoardGenerator(columns = 7, rows = 7, directions = listOf(Direction.RIGHT, Direction.UP), filler = filler, downWords = 1..1)
+            BoardGenerator(
+                columns = 7,
+                rows = 7,
+                directions = listOf(Direction.RIGHT, Direction.UP),
+                filler = filler,
+                downWords =
+                    1..1,
+            )
         for (seed in 1uL..20uL) {
             val board = generator.board(listOf("CAT", "DOG", "SUN"), seed)
             assertEquals(1, board.placements.count { it.direction == Direction.UP })
@@ -63,7 +78,13 @@ class ReverseDirectionTests {
             )
         for (seed in 1uL..20uL) {
             val board = generator.board(listOf("LEVEL", "CAT", "SUN"), seed)
-            for (word in listOf("LEVEL", "CAT", "SUN")) assertEquals(1, board.occurrences(word, along = generator.directions))
+            for (word in listOf(
+                "LEVEL",
+                "CAT",
+                "SUN",
+            )) {
+                assertEquals(1, board.occurrences(word, along = generator.directions))
+            }
         }
     }
 

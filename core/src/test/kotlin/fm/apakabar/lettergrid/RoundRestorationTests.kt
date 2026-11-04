@@ -43,14 +43,26 @@ class RoundRestorationTests {
     @Test
     fun negativeSecondsAreReported() {
         val failure =
-            assertFailsWith<RoundProgress.Failure> { Round.restoring(RoundProgress(secondsLeft = -1), board, directions = right) }
+            assertFailsWith<RoundProgress.Failure> {
+                Round.restoring(
+                    RoundProgress(secondsLeft = -1),
+                    board,
+                    directions = right,
+                )
+            }
         assertEquals(RoundProgress.Failure.NegativeSeconds(-1), failure)
     }
 
     @Test
     fun aRoundMustAllowEveryWordToBeSelected() {
         val failure =
-            assertFailsWith<Round.Failure> { Round.restoring(RoundProgress(), board, directions = listOf(Direction.DOWN)) }
+            assertFailsWith<Round.Failure> {
+                Round.restoring(
+                    RoundProgress(),
+                    board,
+                    directions = listOf(Direction.DOWN),
+                )
+            }
         assertEquals(Round.Failure.UnselectableWord("CAT"), failure)
     }
 
@@ -71,7 +83,14 @@ class RoundRestorationTests {
 
     @Test
     fun aRestoredExpiredClockCannotPlayBeforeTheFirstTick() {
-        val round = Round.restoring(RoundProgress(secondsLeft = 0), board, directions = right, seconds = 20, introduces = true)
+        val round =
+            Round.restoring(
+                RoundProgress(secondsLeft = 0),
+                board,
+                directions = right,
+                seconds = 20,
+                introduces = true,
+            )
         round.touch(Cell(0, 0))
         round.drag(Cell(0, 2))
         assertEquals(Round.Phase.LOST, round.phase)

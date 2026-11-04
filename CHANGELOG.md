@@ -11,6 +11,13 @@ the same major and minor number, and the two behave the same: given the same see
 build the same board. Patch numbers are counted separately in each library, and a patch
 release never changes behaviour.
 
+## [0.24.1] - 2026-11-04
+
+### Changed
+
+- Internal refactor, drop-in: the public API and the behaviour are unchanged, and a seed
+  gives the same board as in 0.24.0 and in lettergrid-swift 0.24.0.
+
 ## [0.24.0] - 2026-11-04
 
 What an app shows around the board, such as the list of words still to find, now belongs to

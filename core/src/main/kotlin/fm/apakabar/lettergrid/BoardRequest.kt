@@ -31,7 +31,15 @@ class BoardRequest internal constructor(
         fallback: Board,
         weights: LetterWeights,
         symbols: Set<String>,
-    ): BoardRequest = BoardRequest(words, firstDirection, generator, leadingRules, layout, RunFreeFallback(fallback, weights, symbols))
+    ): BoardRequest =
+        BoardRequest(
+            words,
+            firstDirection,
+            generator,
+            leadingRules,
+            layout,
+            RunFreeFallback(fallback, weights, symbols),
+        )
 
     override fun equals(other: Any?): Boolean =
         other is BoardRequest &&

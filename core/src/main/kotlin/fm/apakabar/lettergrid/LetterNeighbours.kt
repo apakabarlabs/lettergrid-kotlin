@@ -9,14 +9,11 @@ internal class LetterNeighbours(
         letterAt: (Cell) -> String?,
     ): Map<String, Int> {
         val counts = mutableMapOf<String, Int>()
-        for (rowStep in -1..1) {
-            for (columnStep in -1..1) {
-                if (rowStep == 0 && columnStep == 0) continue
-                val neighbour = Cell(around.row + rowStep, around.column + columnStep)
-                if (neighbour.row !in 0 until rows || neighbour.column !in 0 until columns) continue
-                letterAt(neighbour)?.let { counts[it] = (counts[it] ?: 0) + 1 }
-            }
-        }
+        val neighbours =
+            (-1..1)
+                .flatMap { rowStep -> (-1..1).map { Cell(around.row + rowStep, around.column + it) } }
+                .filter { it != around && it.row in 0 until rows && it.column in 0 until columns }
+        for (neighbour in neighbours) letterAt(neighbour)?.let { counts[it] = (counts[it] ?: 0) + 1 }
         return counts
     }
 }

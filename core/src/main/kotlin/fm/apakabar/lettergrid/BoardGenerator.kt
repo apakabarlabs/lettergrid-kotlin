@@ -23,7 +23,8 @@ class BoardGenerator private constructor(
             val columns: Int,
             val rows: Int,
         ) : Failure(
-                "Could not prepare a checked grid $columns wide with minimum height $rows for " + words.joinToString(", "),
+                "Could not prepare a checked grid $columns wide with minimum height $rows for " +
+                    words.joinToString(", "),
             )
 
         data class Unsettled(
@@ -112,17 +113,18 @@ class BoardGenerator private constructor(
         firstRule: WordRule?,
     ): BoardRequest {
         validateConfiguration()
-        val leading: List<WordRule>
-        if (usesPathRules) {
-            if (firstDirection != null || (firstRule != null && firstRule !in rules)) throw Failure.InvalidConfiguration
-            leading = listOfNotNull(firstRule)
-        } else {
-            if (firstRule != null) throw Failure.InvalidConfiguration
-            if (firstDirection != null && firstDirection !in directions) {
-                throw Failure.NoRoom(words.map { it.cellUppercased }, columns, rows)
+        val invalid =
+            if (usesPathRules) {
+                firstDirection != null || (firstRule != null && firstRule !in rules)
+            } else {
+                firstRule != null
             }
-            leading = listOfNotNull(firstDirection?.let { WordRule(listOf(it)) })
+        if (invalid) throw Failure.InvalidConfiguration
+        if (!usesPathRules && firstDirection != null && firstDirection !in directions) {
+            throw Failure.NoRoom(words.map { it.cellUppercased }, columns, rows)
         }
+        val leading =
+            if (usesPathRules) listOfNotNull(firstRule) else listOfNotNull(firstDirection?.let { WordRule(listOf(it)) })
         return checkedTargets(words, firstDirection, leading)
     }
 

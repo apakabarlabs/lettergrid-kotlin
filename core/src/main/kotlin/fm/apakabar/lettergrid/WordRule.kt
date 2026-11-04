@@ -6,7 +6,8 @@ data class WordRule(
 ) {
     fun matches(cells: List<Cell>): Boolean = PathGeometry(cells)?.let(::matches) ?: false
 
-    internal fun matches(geometry: PathGeometry): Boolean = isValid && geometry.direction in startDirections && geometry.turns == turns
+    internal fun matches(geometry: PathGeometry): Boolean =
+        isValid && geometry.direction in startDirections && geometry.turns == turns
 
     fun matches(placement: Placement): Boolean = matches(placement.cells)
 
@@ -15,17 +16,21 @@ data class WordRule(
         columns: Int,
         maximumRows: Int? = null,
     ): Boolean {
-        if (!isValid || length < minimumLength || columns <= 0) return false
-        if (maximumRows != null && (maximumRows <= 0 || (length - 1) / columns >= maximumRows)) return false
-        return PathShapes(
-            columns = columns,
-            length = length,
-            rule = this,
-            maximumShapes = 1,
-            maximumRows = maximumRows,
-            visitedLimit = null,
-            randomized = false,
-        ).cells().isNotEmpty()
+        val fits =
+            isValid &&
+                length >= minimumLength &&
+                columns > 0 &&
+                (maximumRows == null || (maximumRows > 0 && (length - 1) / columns < maximumRows))
+        return fits &&
+            PathShapes(
+                columns = columns,
+                length = length,
+                rule = this,
+                maximumShapes = 1,
+                maximumRows = maximumRows,
+                visitedLimit = null,
+                randomized = false,
+            ).cells().isNotEmpty()
     }
 
     val isValid: Boolean get() = startDirections.isNotEmpty() && turns in supportedTurns
@@ -54,16 +59,15 @@ internal class PathGeometry private constructor(
 ) {
     companion object {
         operator fun invoke(cells: List<Cell>): PathGeometry? {
-            if (cells.size <= 1 || cells.toSet().size != cells.size) return null
-            val steps = cells.zipWithNext().mapNotNull { (start, end) -> Direction.between(start, end) }
-            if (steps.size != cells.size - 1) return null
-            var turns = 0
-            for ((previous, next) in steps.zipWithNext()) {
-                if (previous == next) continue
-                if (next !in previous.perpendiculars) return null
-                turns += 1
-            }
-            return PathGeometry(steps.first(), turns)
+            val steps =
+                cells
+                    .takeIf { it.size > 1 && it.toSet().size == it.size }
+                    ?.zipWithNext()
+                    ?.mapNotNull { (start, end) -> Direction.between(start, end) }
+                    ?.takeIf { it.size == cells.size - 1 }
+            val bends = steps?.zipWithNext()?.filter { (previous, next) -> previous != next }
+            val square = bends?.all { (previous, next) -> next in previous.perpendiculars } == true
+            return if (steps != null && bends != null && square) PathGeometry(steps.first(), bends.size) else null
         }
     }
 }

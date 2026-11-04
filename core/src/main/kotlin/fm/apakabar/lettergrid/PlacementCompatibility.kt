@@ -33,7 +33,10 @@ internal class PlacementCompatibility(
         val placements = chosen.filterNotNull()
         val letters = letters(placements)
         val areas = placements.map { it.cells.toSet() }
-        val nested = areas.indices.any { inner -> areas.indices.any { it != inner && areas[it].containsAll(areas[inner]) } }
+        val nested =
+            areas.indices.any { inner ->
+                areas.indices.any { it != inner && areas[it].containsAll(areas[inner]) }
+            }
         if (nested) return false
         val board = Board(letters, placements)
         val counts = letterCounts(letters)
@@ -42,10 +45,10 @@ internal class PlacementCompatibility(
                 standsAlone(it.word, counts) ||
                     if (placements.size == 1) it.readsOnceAlone(rules) else board.hasSingleOccurrence(it.word, rules)
             }
-        if (!alone) return false
-        return chosen.zip(words).all { (placement, word) ->
-            placement != null || !spells(word, counts) || leavesRoom(word, board, areas)
-        }
+        return alone &&
+            chosen.zip(words).all { (placement, word) ->
+                placement != null || !spells(word, counts) || leavesRoom(word, board, areas)
+            }
     }
 
     private fun letters(placements: List<Placement>): List<List<String>> = placements.letters(columns, rows, blank)

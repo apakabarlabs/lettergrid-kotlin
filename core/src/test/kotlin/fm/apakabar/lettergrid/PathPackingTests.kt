@@ -107,27 +107,36 @@ class PathPackingTests {
         for (item in cases) {
             val blank = ""
             assertFalse(item.words.joinToString("").contains(blank))
-            val compatibility = PlacementCompatibility(item.columns, item.rows, item.rules.map { it.wordRule }, item.words, blank)
-            val verdicts = mutableSetOf<Boolean>()
-            for ((index, word) in item.words.withIndex()) {
-                for (rule in item.rules.map { it.wordRule }) {
-                    val shapes =
-                        PathShapes(
-                            columns = item.columns,
-                            length = word.cellCount,
-                            rule = rule,
-                            maximumShapes = Int.MAX_VALUE,
-                            maximumRows = item.rows,
-                            visitedLimit = null,
-                            randomized = false,
-                        ).cells()
-                    for (shape in shapes) verdicts += checkOffsets(shape, index, item, compatibility)
-                }
-            }
+            val compatibility =
+                PlacementCompatibility(item.columns, item.rows, item.rules.map { it.wordRule }, item.words, blank)
+            val verdicts =
+                item.words
+                    .withIndex()
+                    .flatMap { (index, word) ->
+                        item.rules
+                            .map { it.wordRule }
+                            .flatMap { rule -> shapes(word, rule, item) }
+                            .map { shape -> checkOffsets(shape, index, item, compatibility) }
+                    }.toSet()
             assertTrue(verdicts.isNotEmpty(), item.name)
             if (item.mixedShapes == true) assertEquals(setOf(true, false), verdicts, item.name)
         }
     }
+
+    private fun shapes(
+        word: String,
+        rule: WordRule,
+        item: PackingCase,
+    ): List<List<Cell>> =
+        PathShapes(
+            columns = item.columns,
+            length = word.cellCount,
+            rule = rule,
+            maximumShapes = Int.MAX_VALUE,
+            maximumRows = item.rows,
+            visitedLimit = null,
+            randomized = false,
+        ).cells()
 
     private fun checkOffsets(
         shape: List<Cell>,
@@ -178,7 +187,11 @@ class PathPackingTests {
         val first = item.firstRule
         val placement = placements.firstOrNull()
         if (first != null && placement != null) assertTrue(first.wordRule.matches(placement), item.name)
-        if (item.avoidsTargetRuns == true) assertFalse(Layout(item.rows, placements).hasForbiddenTargetRun(item.columns))
+        if (item.avoidsTargetRuns ==
+            true
+        ) {
+            assertFalse(Layout(item.rows, placements).hasForbiddenTargetRun(item.columns))
+        }
         assertTrue(placements.count { it.direction.isVertical } in quota, item.name)
         val board = Board.validating(letters, placements)
         for (each in placements) assertTrue(board.hasSingleOccurrence(each.word, rules), item.name)

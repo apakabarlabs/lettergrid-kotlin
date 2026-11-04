@@ -5,24 +5,35 @@ fun Board.selection(
     toward: Cell,
     rules: List<WordRule>,
 ): List<Cell> {
-    val last = extending.lastOrNull()
-    if (last == null || !contains(toward)) return extending
     val start = extending.firstOrNull()
-    if (rules.all { it.turns == 0 } && start != null) return selection(start, toward, rules.startDirections)
     val index = extending.indexOf(toward)
-    if (index >= 0) return extending.take(index + 1)
-    firstSegmentSelection(extending, toward, rules)?.let { return it }
-    val ways: List<Direction>
-    if (extending.size == 1) {
-        ways = rules.flatMap { it.startDirections }.toSet().sortedBy { it.serialName }
-    } else {
-        val geometry = PathGeometry(extending) ?: return extending
-        val direction = Direction.between(extending[extending.size - 2], last) ?: return extending
-        val canTurn = rules.any { geometry.direction in it.startDirections && geometry.turns < it.turns }
-        ways = listOf(direction) + if (canTurn) direction.perpendiculars else emptyList()
+    return when {
+        start == null || !contains(toward) -> extending
+        rules.all { it.turns == 0 } -> selection(start, toward, rules.startDirections)
+        index >= 0 -> extending.take(index + 1)
+        else ->
+            firstSegmentSelection(extending, toward, rules)
+                ?: continuationWays(extending, rules)?.let { continuedSelection(extending, toward, it) }
+                ?: extending
     }
-    return continuedSelection(extending, toward, ways)
 }
+
+private fun continuationWays(
+    extending: List<Cell>,
+    rules: List<WordRule>,
+): List<Direction>? =
+    if (extending.size == 1) {
+        rules.flatMap { it.startDirections }.toSet().sortedBy { it.serialName }
+    } else {
+        val geometry = PathGeometry(extending)
+        val direction = Direction.between(extending[extending.size - 2], extending.last())
+        if (geometry == null || direction == null) {
+            null
+        } else {
+            val canTurn = rules.any { geometry.direction in it.startDirections && geometry.turns < it.turns }
+            listOf(direction) + if (canTurn) direction.perpendiculars else emptyList()
+        }
+    }
 
 private fun Board.firstSegmentSelection(
     cells: List<Cell>,
@@ -34,8 +45,12 @@ private fun Board.firstSegmentSelection(
     if (geometry == null || geometry.turns != 0 || start == null) return null
     val straight = selection(start, toward, rules.startDirections)
     val canTurn = rules.any { geometry.direction in it.startDirections && it.turns > 0 }
-    if (!canTurn) return straight
-    val turned = continuedSelection(cells, toward, listOf(geometry.direction) + geometry.direction.perpendiculars)
+    val turned =
+        if (canTurn) {
+            continuedSelection(cells, toward, listOf(geometry.direction) + geometry.direction.perpendiculars)
+        } else {
+            straight
+        }
     return if (distance(straight, toward) < distance(turned, toward)) straight else turned
 }
 

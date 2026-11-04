@@ -33,86 +33,93 @@ internal data class PathPacking(
         val placement: Placement,
     )
 
-    private class Search(
+    private class DirectionCounts(
+        val maximum: Int?,
+    ) {
+        private val counts = mutableMapOf<Direction, Int>()
+
+        fun hasRoom(direction: Direction): Boolean = maximum?.let { (counts[direction] ?: 0) < it } ?: true
+
+        fun count(
+            direction: Direction,
+            change: Int,
+        ) {
+            if (maximum != null) counts[direction] = (counts[direction] ?: 0) + change
+        }
+    }
+
+    private inner class Search(
         val words: List<List<String>>,
         val choices: List<List<Candidate>>,
         val order: List<Int>,
         val runs: PlacedRuns?,
-        val downWords: IntRange,
-        val maxWordsPerDirection: Int?,
         val nodeLimit: Int,
-        val standApart: (List<Placement?>) -> Boolean,
-        val completes: (List<Placement>, Budget) -> Completion,
-        size: Int,
-        count: Int,
+        val compatibility: PlacementCompatibility,
     ) {
-        val letters = MutableList<String?>(size) { null }
-        val uses = IntArray(size)
-        val chosen = MutableList<Placement?>(count) { null }
+        val letters = MutableList<String?>(rows * columns) { null }
+        val uses = IntArray(rows * columns)
+        val chosen = MutableList<Placement?>(words.size) { null }
         var vertical = 0
-        val directionCounts = mutableMapOf<Direction, Int>()
+        val directionCounts = DirectionCounts(maxWordsPerDirection)
         var nodes = 0
         var exhausted = false
 
         val sharedCells: Int get() = uses.sumOf { maxOf(it - 1, 0) }
 
-        fun place(depth: Int): Boolean {
-            if (depth >= order.size) {
-                if (vertical !in downWords) return false
-                val budget = Budget(nodeLimit - nodes)
-                val completion = completes(chosen.filterNotNull(), budget)
-                nodes = nodeLimit - budget.value
-                return when (completion) {
-                    Completion.FITS -> true
-                    Completion.DOES_NOT_FIT -> false
-                    Completion.RAN_OUT -> {
-                        exhausted = true
-                        false
-                    }
-                }
-            }
-            val index = order[depth]
-            val remaining = order.size - depth - 1
-            for (candidate in crossingFirst(choices[index], words[index])) {
-                nodes += 1
-                if (nodes > nodeLimit) {
-                    exhausted = true
-                    return false
-                }
-                val counted = vertical + if (candidate.placement.direction.isVertical) 1 else 0
-                if (counted > downWords.last ||
-                    counted + remaining < downWords.first ||
-                    !hasDirectionRoom(candidate) ||
-                    !fits(candidate, words[index])
-                ) {
-                    continue
-                }
-                apply(candidate, words[index])
-                chosen[index] = candidate.placement
-                vertical = counted
-                countDirection(candidate, 1)
-                val formsRun = runs?.formed(candidate.placement, letters, chosen) ?: false
-                if (!formsRun && standApart(chosen) && place(depth + 1)) return true
-                countDirection(candidate, -1)
-                vertical -= if (candidate.placement.direction.isVertical) 1 else 0
-                chosen[index] = null
-                remove(candidate)
-                if (exhausted) return false
-            }
-            return false
+        fun place(depth: Int): Boolean = if (depth >= order.size) complete() else placeNext(depth)
+
+        private fun complete(): Boolean {
+            if (vertical !in downWords) return false
+            val budget = Budget(nodeLimit - nodes)
+            val completion = completes(chosen.filterNotNull(), budget)
+            nodes = nodeLimit - budget.value
+            if (completion == Completion.RAN_OUT) exhausted = true
+            return completion == Completion.FITS
         }
 
-        private fun hasDirectionRoom(candidate: Candidate): Boolean =
-            maxWordsPerDirection?.let { (directionCounts[candidate.placement.direction] ?: 0) < it } ?: true
-
-        private fun countDirection(
-            candidate: Candidate,
-            change: Int,
-        ) {
-            if (maxWordsPerDirection != null) {
-                val direction = candidate.placement.direction
-                directionCounts[direction] = (directionCounts[direction] ?: 0) + change
+        private fun placeNext(depth: Int): Boolean {
+            val index = order[depth]
+            val remaining = order.size - depth - 1
+            return crossingFirst(choices[index], words[index]).any { candidate ->
+                !exhausted && tries(candidate, index, remaining, depth)
             }
+        }
+
+        private fun tries(
+            candidate: Candidate,
+            index: Int,
+            remaining: Int,
+            depth: Int,
+        ): Boolean {
+            nodes += 1
+            if (nodes > nodeLimit) exhausted = true
+            val counted = vertical + if (candidate.placement.direction.isVertical) 1 else 0
+            val withinDownWords = counted <= downWords.last && counted + remaining >= downWords.first
+            if (exhausted || !withinDownWords) return false
+            return directionCounts.hasRoom(candidate.placement.direction) && fits(candidate, words[index]) &&
+                descends(candidate, index, counted, depth)
+        }
+
+        private fun descends(
+            candidate: Candidate,
+            index: Int,
+            counted: Int,
+            depth: Int,
+        ): Boolean {
+            apply(candidate, words[index])
+            chosen[index] = candidate.placement
+            val previousVertical = vertical
+            vertical = counted
+            directionCounts.count(candidate.placement.direction, 1)
+            val formsRun = runs?.formed(candidate.placement, letters, chosen) ?: false
+            val placed = !formsRun && compatibility.accepts(chosen) && place(depth + 1)
+            if (!placed) {
+                directionCounts.count(candidate.placement.direction, -1)
+                vertical = previousVertical
+                chosen[index] = null
+                remove(candidate)
+            }
+            return placed
         }
 
         private fun crossingFirst(
@@ -162,14 +169,15 @@ internal data class PathPacking(
                 rules.any { it.turns == first.turns && it.startDirections.containsAll(first.startDirections) }
             },
         ) { "Every leading rule must lie within a rule every reading is checked against." }
-        if (leadingRules.size > words.size) return Outcome.Impossible
-        val random = SeededRandom(seed)
-        if (words.isEmpty()) return Outcome.Impossible
-        val blank = String.privateUse(avoiding = words.flatMap { it.cells }.toSet()) ?: return Outcome.Impossible
-        val compatibility = PlacementCompatibility(columns, rows, rules, words, blank)
-        val all = standingAlone(words, compatibility)
-        if (!all.all { it.isNotEmpty() }) return Outcome.Impossible
-        return restarting(words, all, compatibility, random)
+        val sized = leadingRules.size <= words.size && words.isNotEmpty()
+        val blank = if (sized) String.privateUse(avoiding = words.flatMap { it.cells }.toSet()) else null
+        val compatibility = blank?.let { PlacementCompatibility(columns, rows, rules, words, it) }
+        val all = compatibility?.let { standingAlone(words, it) }
+        return if (compatibility != null && all != null && all.all { it.isNotEmpty() }) {
+            restarting(words, all, compatibility, SeededRandom(seed))
+        } else {
+            Outcome.Impossible
+        }
     }
 
     private fun restarting(
@@ -178,47 +186,48 @@ internal data class PathPacking(
         compatibility: PlacementCompatibility,
         random: SeededRandom,
     ): Outcome {
-        val canCross =
-            words.indices.any { first ->
-                words.indices.any { it > first && words[first].cells.intersect(words[it].cells.toSet()).isNotEmpty() }
-            }
+        val canCross = canCross(words)
         val runs = if (prunesRuns(words)) PlacedRuns(columns, rows) else null
         var best: Pair<List<Placement>, Int>? = null
         var spent = 0
-        repeat(maxOf(1, crossingRestarts)) {
+        var outcome: Outcome? = null
+        var attempts = maxOf(1, crossingRestarts)
+        while (outcome == null && attempts > 0) {
+            attempts -= 1
             val choices = all.map { random.shuffled(it) }
-            val search =
-                Search(
-                    words = words.map { it.cells },
-                    choices = choices,
-                    order =
-                        words.indices.sortedWith { first, second ->
-                            if (choices[first].size != choices[second].size) {
-                                choices[first].size - choices[second].size
-                            } else {
-                                first - second
-                            }
-                        },
-                    runs = runs,
-                    downWords = downWords,
-                    maxWordsPerDirection = maxWordsPerDirection,
-                    nodeLimit = nodeLimit - spent,
-                    standApart = compatibility::accepts,
-                    completes = completes,
-                    size = rows * columns,
-                    count = words.size,
-                )
-            if (!search.place(0)) {
-                best?.let { return Outcome.Placed(it.first) }
-                return if (search.exhausted) Outcome.Undetermined else Outcome.Impossible
+            val search = Search(words.map { it.cells }, choices, order(choices), runs, nodeLimit - spent, compatibility)
+            if (search.place(0)) {
+                spent += search.nodes
+                val shared = search.sharedCells
+                val kept = better(best, search.chosen.filterNotNull() to shared)
+                best = kept
+                if (shared > 0 || !canCross) outcome = Outcome.Placed(kept.first)
+            } else {
+                outcome = best?.let { Outcome.Placed(it.first) }
+                    ?: if (search.exhausted) Outcome.Undetermined else Outcome.Impossible
             }
-            spent += search.nodes
-            val shared = search.sharedCells
-            if (best?.let { shared > it.second } ?: true) best = search.chosen.filterNotNull() to shared
-            if (shared > 0 || !canCross) return Outcome.Placed(best.first)
         }
-        return best?.let { Outcome.Placed(it.first) } ?: Outcome.Impossible
+        return outcome ?: best?.let { Outcome.Placed(it.first) } ?: Outcome.Impossible
     }
+
+    private fun canCross(words: List<String>): Boolean =
+        words.indices.any { first ->
+            words.indices.any { it > first && words[first].cells.intersect(words[it].cells.toSet()).isNotEmpty() }
+        }
+
+    private fun better(
+        previous: Pair<List<Placement>, Int>?,
+        found: Pair<List<Placement>, Int>,
+    ): Pair<List<Placement>, Int> = if (previous == null || found.second > previous.second) found else previous
+
+    private fun order(choices: List<List<Candidate>>): List<Int> =
+        choices.indices.sortedWith { first, second ->
+            if (choices[first].size != choices[second].size) {
+                choices[first].size - choices[second].size
+            } else {
+                first - second
+            }
+        }
 
     private fun prunesRuns(words: List<String>): Boolean =
         forbidsRuns &&
@@ -243,10 +252,9 @@ internal data class PathPacking(
         accepting: (Placement) -> Boolean,
     ): List<Candidate> {
         val seen = mutableSetOf<List<Cell>>()
-        val found = mutableListOf<Candidate>()
-        for (rule in rules) {
-            for (direction in rule.startDirections) {
-                val shapes =
+        val shapes =
+            rules.flatMap { rule ->
+                rule.startDirections.flatMap { direction ->
                     PathShapes(
                         columns = columns,
                         length = word.cellCount,
@@ -256,21 +264,27 @@ internal data class PathPacking(
                         visitedLimit = null,
                         randomized = false,
                     ).cells()
-                for (shape in shapes) {
-                    val height = (shape.maxOfOrNull { it.row } ?: 0) + 1
-                    val width = (shape.maxOfOrNull { it.column } ?: 0) + 1
-                    if (height > rows || width > columns || !seen.add(shape)) continue
-                    val lone = Placement(word, shape)
-                    if (!accepting(lone)) continue
-                    for (row in 0..(rows - height)) {
-                        for (column in 0..(columns - width)) {
-                            val placement = lone.shifted(row, column)
-                            found += Candidate(placement.cells.map { it.row * columns + it.column }, placement)
-                        }
-                    }
                 }
             }
+        val found = mutableListOf<Candidate>()
+        for (shape in shapes) {
+            val height = (shape.maxOfOrNull { it.row } ?: 0) + 1
+            val width = (shape.maxOfOrNull { it.column } ?: 0) + 1
+            val lone = if (height <= rows && width <= columns && seen.add(shape)) Placement(word, shape) else null
+            if (lone != null && accepting(lone)) found += shifts(lone, height, width)
         }
         return found
     }
+
+    private fun shifts(
+        lone: Placement,
+        height: Int,
+        width: Int,
+    ): List<Candidate> =
+        (0..(rows - height)).flatMap { row ->
+            (0..(columns - width)).map { column ->
+                val placement = lone.shifted(row, column)
+                Candidate(placement.cells.map { it.row * columns + it.column }, placement)
+            }
+        }
 }

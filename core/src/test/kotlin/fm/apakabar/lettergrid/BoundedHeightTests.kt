@@ -15,17 +15,26 @@ class BoundedHeightTests {
     @ParameterizedTest
     @ValueSource(ints = [-1, 0, 4])
     fun aMaximumBelowTheMinimumIsRejected(maximum: Int) {
-        val generator = BoardGenerator(columns = 5, rows = 5, maxRows = maximum, directions = listOf(Direction.RIGHT), filler = filler())
+        val generator =
+            BoardGenerator(
+                columns = 5,
+                rows = 5,
+                maxRows = maximum,
+                directions = listOf(Direction.RIGHT),
+                filler = filler(),
+            )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("CAT")) }
         assertEquals(BoardGenerator.Failure.InvalidConfiguration, failure)
     }
 
     @Test
     fun impossiblePackingFailsBeforeAPlayableRequestExists() {
-        val generator = BoardGenerator(columns = 3, rows = 1, maxRows = 1, directions = listOf(Direction.RIGHT), filler = filler())
+        val generator =
+            BoardGenerator(columns = 3, rows = 1, maxRows = 1, directions = listOf(Direction.RIGHT), filler = filler())
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("CAT", "DOG")) }
         assertEquals(BoardGenerator.Failure.NoRoom(listOf("CAT", "DOG"), 3, 1), failure)
-        val unrestricted = BoardGenerator(columns = 3, rows = 1, directions = listOf(Direction.RIGHT), filler = filler())
+        val unrestricted =
+            BoardGenerator(columns = 3, rows = 1, directions = listOf(Direction.RIGHT), filler = filler())
         assertTrue(unrestricted.request(listOf("CAT", "DOG")).board(1uL).rows > 1)
     }
 
@@ -141,7 +150,8 @@ class BoundedHeightTests {
     fun theOptionalMaximumIsPartOfRequestIdentity() {
         val straight = listOf(Direction.RIGHT, Direction.DOWN)
         val unrestricted = BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler())
-        val explicitNil = BoardGenerator(columns = 7, rows = 7, maxRows = null, directions = straight, filler = filler())
+        val explicitNil =
+            BoardGenerator(columns = 7, rows = 7, maxRows = null, directions = straight, filler = filler())
         val bounded = BoardGenerator(columns = 7, rows = 7, maxRows = 7, directions = straight, filler = filler())
         assertEquals(unrestricted, explicitNil)
         assertNotEquals(unrestricted, bounded)

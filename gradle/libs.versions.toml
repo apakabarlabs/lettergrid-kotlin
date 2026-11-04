@@ -6,6 +6,7 @@ junitJupiter = "6.1.3"
 mavenPublish = "0.37.0"
 ktlintPlugin = "14.2.0"
 dokka = "2.2.0"
+detekt = "1.23.8"
 kotaml = "0.112.0"
 coroutines = "1.11.0"
 
@@ -27,3 +28,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintPlugin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

@@ -54,63 +54,71 @@ internal data class PathSearch(
                 if (counts.isEmpty()) null else AllowedTurns(direction, counts)
             }
         val trail = Trail(board.rows * board.columns)
-        val codes = ArrayList<Int?>(board.rows * board.columns)
-        for (row in 0 until board.rows) {
-            for (column in 0 until board.columns) {
-                codes += letter(Cell(row, column))?.let { index.code(of = it) }
-            }
-        }
-        val visitor = Visitor(visit, skipping, codes)
+        val starts = (0 until board.rows).flatMap { row -> (0 until board.columns).map { Cell(row, it) } }
+        val visitor = Visitor(visit, skipping, starts.map { start -> letter(start)?.let { index.code(of = it) } })
         for (rule in grouped) {
-            for (row in 0 until board.rows) {
-                for (column in 0 until board.columns) {
-                    val start = Cell(row, column)
-                    val code = codes[slot(start)] ?: continue
-                    val node = index.next(after = 0, code = code) ?: continue
-                    if (visitor.skips(node)) continue
-                    enter(start, trail)
-                    walk(Step(rule.direction, 0, node), rule, index, trail, visitor)
-                    leave(trail)
-                    if (trail.stopped) return
-                }
+            val walker = Walker(rule, index, trail, visitor)
+            for (start in starts) {
+                walker.start(start)
+                if (trail.stopped) return
             }
         }
     }
 
-    private fun walk(
-        step: Step,
-        rule: AllowedTurns,
-        index: WordIndex,
-        trail: Trail,
-        visitor: Visitor,
+    private inner class Walker(
+        val rule: AllowedTurns,
+        val index: WordIndex,
+        val trail: Trail,
+        val visitor: Visitor,
     ) {
-        val length = trail.cells.size
-        val word = index.word(at = step.node)
-        if (step.turns in rule.counts && word != null) {
-            val placement =
-                if (length == 1) {
-                    Placement(word, trail.cells[0], rule.direction)
-                } else {
-                    Placement(word, trail.cells.toList())
-                }
-            if (!visitor.visit(placement)) {
-                trail.stopped = true
-                return
+        fun start(cell: Cell) {
+            val node = visitor.codes[slot(cell)]?.let { index.next(after = 0, code = it) }
+            if (node != null && !visitor.skips(node)) follow(cell, Step(rule.direction, 0, node))
+        }
+
+        private fun follow(
+            cell: Cell,
+            step: Step,
+        ) {
+            enter(cell, trail)
+            walk(step)
+            leave(trail)
+        }
+
+        private fun walk(step: Step) {
+            val length = trail.cells.size
+            val word = index.word(at = step.node)
+            if (step.turns in rule.counts && word != null) trail.stopped = !visitor.visit(placement(word, length))
+            if (trail.stopped || length >= index.longest) return
+            val last = trail.cells.last()
+            val canTurn = length > 1 && step.turns < rule.maximum
+            for (way in ways(step.direction, canTurn)) {
+                if (!trail.stopped) extend(last, way, step)
             }
         }
-        if (length >= index.longest) return
-        val last = trail.cells.lastOrNull() ?: return
-        val canTurn = length > 1 && step.turns < rule.maximum
-        for (way in ways(step.direction, canTurn)) {
+
+        private fun placement(
+            word: String,
+            length: Int,
+        ): Placement =
+            if (length == 1) {
+                Placement(word, trail.cells[0], rule.direction)
+            } else {
+                Placement(word, trail.cells.toList())
+            }
+
+        private fun extend(
+            last: Cell,
+            way: Direction,
+            step: Step,
+        ) {
             val next = last.moved(way, 1)
-            if (!board.contains(next) || trail.visited[slot(next)]) continue
-            val code = visitor.codes[slot(next)] ?: continue
-            val child = index.next(after = step.node, code = code) ?: continue
-            if (visitor.skips(child)) continue
-            enter(next, trail)
-            walk(Step(way, step.turns + if (way == step.direction) 0 else 1, child), rule, index, trail, visitor)
-            leave(trail)
-            if (trail.stopped) return
+            val open = board.contains(next) && !trail.visited[slot(next)]
+            val code = if (open) visitor.codes[slot(next)] else null
+            val child = code?.let { index.next(after = step.node, code = it) }
+            if (child != null && !visitor.skips(child)) {
+                follow(next, Step(way, step.turns + if (way == step.direction) 0 else 1, child))
+            }
         }
     }
 
@@ -132,10 +140,12 @@ internal data class PathSearch(
     }
 
     private companion object {
-        fun position(direction: Direction): Int = (direction.rowStep + 1) * 3 + direction.columnStep + 1
+        const val STEPS_PER_AXIS = 3
+
+        fun position(direction: Direction): Int = (direction.rowStep + 1) * STEPS_PER_AXIS + direction.columnStep + 1
 
         val turnings: List<List<Direction>> =
-            (0 until 9).map { position ->
+            (0 until STEPS_PER_AXIS * STEPS_PER_AXIS).map { position ->
                 Direction.entries.firstOrNull { position == position(it) }?.let { listOf(it) + it.perpendiculars }
                     ?: emptyList()
             }

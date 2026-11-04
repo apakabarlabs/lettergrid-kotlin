@@ -62,7 +62,8 @@ class BoardGeneratorTests {
     @Test
     fun theWordsStandingDownStayWithinTheirRange() {
         for (range in listOf(0..1, 2..3, 3..5)) {
-            val generator = BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler, downWords = range)
+            val generator =
+                BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler, downWords = range)
             for (seed in 1uL..20uL) {
                 val board = generator.board(listOf("cat", "dog", "sun", "pen", "map"), seed)
                 assertTrue(board.placements.count { it.direction == Direction.DOWN } in range)
@@ -73,7 +74,15 @@ class BoardGeneratorTests {
     @Test
     fun anImpossibleMinimumVerticalQuotaFails() {
         for (firstDirection in listOf(null, Direction.RIGHT)) {
-            val generator = BoardGenerator(columns = 3, rows = 3, directions = straight, filler = filler, downWords = 2..2)
+            val generator =
+                BoardGenerator(
+                    columns = 3,
+                    rows = 3,
+                    directions = straight,
+                    filler = filler,
+                    downWords =
+                        2..2,
+                )
             assertFailsWith<BoardGenerator.Failure> { generator.board(listOf("CAT"), 1uL, firstDirection) }
         }
     }
@@ -116,7 +125,13 @@ class BoardGeneratorTests {
         val generator = BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler, downWords = 2..2)
         val crossed =
             (1uL..20uL).filter { seed ->
-                val cells = generator.board(listOf("stone", "notes", "tones", "onset"), seed).placements.flatMap { it.cells }
+                val cells =
+                    generator
+                        .board(
+                            listOf("stone", "notes", "tones", "onset"),
+                            seed,
+                        ).placements
+                        .flatMap { it.cells }
                 cells.toSet().size < cells.size
             }
         assertTrue(crossed.isNotEmpty())

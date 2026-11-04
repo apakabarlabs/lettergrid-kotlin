@@ -40,7 +40,13 @@ class DiagonalTests {
                 downWords = 1..1,
             )
         for (direction in listOf(Direction.DOWN_RIGHT, Direction.DOWN_LEFT)) {
-            assertFailsWith<BoardGenerator.Failure> { generator.board(listOf("ELEPHANT", "CAT"), 1uL, firstDirection = direction) }
+            assertFailsWith<BoardGenerator.Failure> {
+                generator.board(
+                    listOf("ELEPHANT", "CAT"),
+                    1uL,
+                    firstDirection = direction,
+                )
+            }
         }
     }
 
@@ -86,7 +92,15 @@ class DiagonalTests {
     @Test
     fun aWordTooWideForADiagonalFailsInsteadOfGrowingForever() {
         val generator =
-            BoardGenerator(columns = 3, rows = 3, directions = listOf(Direction.DOWN_LEFT), filler = LetterWeights(mapOf("x" to 1.0)))
+            BoardGenerator(
+                columns = 3,
+                rows = 3,
+                directions = listOf(Direction.DOWN_LEFT),
+                filler =
+                    LetterWeights(
+                        mapOf("x" to 1.0),
+                    ),
+            )
         assertFailsWith<BoardGenerator.Failure> { generator.board(listOf("ELEPHANT"), 1uL) }
     }
 }

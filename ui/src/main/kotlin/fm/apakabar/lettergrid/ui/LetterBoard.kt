@@ -157,11 +157,11 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.dragCell
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         cell(down.position, side, board)?.let(onTouch)
-        while (true) {
-            val event = awaitPointerEvent()
-            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-            if (!change.pressed) break
-            cell(change.position, side, board)?.let(onDrag)
+        var pressed = true
+        while (pressed) {
+            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }?.takeIf { it.pressed }
+            change?.let { cell(it.position, side, board) }?.let(onDrag)
+            pressed = change != null
         }
         onRelease()
     }
@@ -172,13 +172,16 @@ private fun cell(
     side: Float,
     board: Board,
 ): Cell? {
-    if (!side.isFinite() || side <= 0 || !point.x.isFinite() || !point.y.isFinite() || board.rows <= 0 || board.columns <= 0) {
-        return null
+    val measurable = side.isFinite() && side > 0 && point.x.isFinite() && point.y.isFinite()
+    val hasCells = board.rows > 0 && board.columns > 0
+    return if (measurable && hasCells) {
+        Cell(
+            row = (point.y / side).coerceIn(0f, (board.rows - 1).toFloat()).toInt(),
+            column = (point.x / side).coerceIn(0f, (board.columns - 1).toFloat()).toInt(),
+        )
+    } else {
+        null
     }
-    return Cell(
-        row = (point.y / side).coerceIn(0f, (board.rows - 1).toFloat()).toInt(),
-        column = (point.x / side).coerceIn(0f, (board.columns - 1).toFloat()).toInt(),
-    )
 }
 
 private const val REJECTION_FADE_MILLIS = 600

@@ -63,7 +63,8 @@ class TurnPathTests {
     @Test
     fun straightOnlyRestorationRejectsABentPlacement() {
         val board = Board(bentBoardLetters, listOf(Placement("ABCDE", path)))
-        val failure = assertFailsWith<Round.Failure> { Round.restoring(RoundProgress(), board, directions = Direction.entries) }
+        val failure =
+            assertFailsWith<Round.Failure> { Round.restoring(RoundProgress(), board, directions = Direction.entries) }
         assertEquals(Round.Failure.UnselectableWord("ABCDE"), failure)
     }
 
@@ -105,7 +106,18 @@ class TurnPathIntegrationTests {
     ) {
         val rule = WordRule(listOf(direction), turns)
         val generator =
-            BoardGenerator(columns = 7, rows = 7, rules = listOf(rule), filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0)))
+            BoardGenerator(
+                columns = 7,
+                rows = 7,
+                rules = listOf(rule),
+                filler =
+                    LetterWeights(
+                        mapOf(
+                            "x" to 1.0,
+                            "q" to 1.0,
+                        ),
+                    ),
+            )
         val board = generator.request(listOf("ABCDEF"), firstRule = rule).board(12uL)
         assertTrue(rule.matches(board.placements[0]))
         assertEquals(1, board.occurrences("ABCDEF", rules = listOf(rule)))
@@ -114,7 +126,16 @@ class TurnPathIntegrationTests {
     @Test
     fun tooShortATurnedWordIsRejectedBeforeBuilding() {
         val rule = WordRule(listOf(Direction.RIGHT), 3)
-        val generator = BoardGenerator(columns = 7, rows = 7, rules = listOf(rule), filler = LetterWeights(mapOf("x" to 1.0)))
+        val generator =
+            BoardGenerator(
+                columns = 7,
+                rows = 7,
+                rules = listOf(rule),
+                filler =
+                    LetterWeights(
+                        mapOf("x" to 1.0),
+                    ),
+            )
         assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("ABCD"), firstRule = rule) }
     }
 
@@ -140,7 +161,9 @@ class TurnPathIntegrationTests {
         val dictionary = (0 until 20_000).map { "ABC$it" }.toSet()
         val rules = (0..3).map { WordRule(Direction.entries, it) }
         assertEquals(0, board.strayWordCount(WordIndex(dictionary), rules))
-        assertTrue(PathShapes(columns = 7, length = 20, rule = WordRule(listOf(Direction.RIGHT), 3)).cells().size <= 256)
+        assertTrue(
+            PathShapes(columns = 7, length = 20, rule = WordRule(listOf(Direction.RIGHT), 3)).cells().size <= 256,
+        )
     }
 
     @Test
@@ -227,7 +250,11 @@ class TurnPathIntegrationTests {
         val rule = WordRule(listOf(Direction.RIGHT), 3)
         for (seed in 0uL until 32uL) {
             val shape = PathShapes(columns = 10, length = 10, rule = rule, maximumShapes = 1).cells(seed).first()
-            val firstTurn = (1 until shape.size - 1).first { Direction.between(shape[it], shape[it + 1]) != Direction.RIGHT }
+            val firstTurn =
+                (1 until shape.size - 1).first {
+                    Direction.between(shape[it], shape[it + 1]) !=
+                        Direction.RIGHT
+                }
             firstTurns += firstTurn
         }
         assertTrue(firstTurns.size >= 3)
@@ -237,7 +264,19 @@ class TurnPathIntegrationTests {
     fun aSeedRebuildsTheSameTurnedBoard() {
         val rule = WordRule(listOf(Direction.RIGHT), 3)
         val generator =
-            BoardGenerator(columns = 7, rows = 7, rules = listOf(rule), filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0)))
+            BoardGenerator(
+                columns = 7,
+                rows = 7,
+                rules = listOf(rule),
+                filler =
+                    LetterWeights(
+                        mapOf(
+                            "x" to 1.0,
+                            "q" to 1.0,
+                            "z" to 1.0,
+                        ),
+                    ),
+            )
         for (word in listOf("PLANET", "GALAXY", "COMETS", "NEBULA")) {
             val first = generator.request(listOf(word), firstRule = rule).board(1uL)
             val repeated = generator.request(listOf(word), firstRule = rule).board(1uL)

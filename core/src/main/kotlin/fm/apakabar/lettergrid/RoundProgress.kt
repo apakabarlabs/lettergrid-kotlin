@@ -28,16 +28,29 @@ data class RoundProgress(
     }
 
     fun validate(board: Board) {
+        failure(board)?.let { throw it }
+    }
+
+    private fun failure(board: Board): Failure? {
         val words = board.placements.associate { it.word to it.word.cellCount }
         val seen = mutableSetOf<String>()
-        for (word in found) {
-            if (word !in words) throw Failure.UnknownWord(word)
-            if (!seen.add(word)) throw Failure.DuplicateFoundWord(word)
-        }
-        for ((word, count) in revealed) {
-            val length = words[word] ?: throw Failure.UnknownWord(word)
-            if (count !in 0 until length) throw Failure.InvalidRevealCount(word, count)
-        }
-        if (secondsLeft != null && secondsLeft < 0) throw Failure.NegativeSeconds(secondsLeft)
+        val foundFailure =
+            found.firstNotNullOfOrNull { word ->
+                when {
+                    word !in words -> Failure.UnknownWord(word)
+                    !seen.add(word) -> Failure.DuplicateFoundWord(word)
+                    else -> null
+                }
+            }
+        val revealedFailure =
+            revealed.entries.firstNotNullOfOrNull { (word, count) ->
+                val length = words[word]
+                when {
+                    length == null -> Failure.UnknownWord(word)
+                    count !in 0 until length -> Failure.InvalidRevealCount(word, count)
+                    else -> null
+                }
+            }
+        return foundFailure ?: revealedFailure ?: secondsLeft?.takeIf { it < 0 }?.let { Failure.NegativeSeconds(it) }
     }
 }

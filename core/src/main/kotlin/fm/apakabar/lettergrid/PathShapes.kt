@@ -16,10 +16,9 @@ internal data class PathShapes(
         val shapes = mutableListOf<List<Cell>>()
 
         fun visit(limit: Int?): Boolean {
-            if (limit == null) return true
-            if (visited >= limit) return false
-            visited += 1
-            return true
+            val allowed = limit == null || visited < limit
+            if (allowed && limit != null) visited += 1
+            return allowed
         }
     }
 
@@ -55,25 +54,29 @@ internal data class PathShapes(
         turns: Int,
         search: Search,
     ) {
-        if (search.shapes.size >= maximumShapes || !search.visit(visitedLimit)) return
-        if (length - path.size < rule.turns - turns) return
+        val proceeds =
+            search.shapes.size < maximumShapes &&
+                search.visit(visitedLimit) &&
+                length - path.size >= rule.turns - turns
+        if (!proceeds) return
         if (path.size == length) {
-            if (turns != rule.turns) return
-            search.shapes += path.map { Cell(it.row - bounds.top, it.column - bounds.left) }
+            if (turns == rule.turns) search.shapes += path.map { Cell(it.row - bounds.top, it.column - bounds.left) }
             return
         }
-        val last = path.lastOrNull() ?: return
+        val last = path.last()
         for (way in directions(direction, path.size, turns, search)) {
             val next = last.moved(way, 1)
-            if (next in path) continue
             val widened = bounds.including(next)
-            if (widened.right - widened.left >= columns) continue
-            if (maximumRows != null && widened.bottom - widened.top >= maximumRows) continue
-            path += next
-            walk(path, widened, way, turns + if (way == direction) 0 else 1, search)
-            path.removeAt(path.lastIndex)
+            if (next !in path && fits(widened)) {
+                path += next
+                walk(path, widened, way, turns + if (way == direction) 0 else 1, search)
+                path.removeAt(path.lastIndex)
+            }
         }
     }
+
+    private fun fits(bounds: Bounds): Boolean =
+        bounds.right - bounds.left < columns && (maximumRows == null || bounds.bottom - bounds.top < maximumRows)
 
     private fun directions(
         after: Direction,

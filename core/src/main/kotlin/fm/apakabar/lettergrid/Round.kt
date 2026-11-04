@@ -90,8 +90,10 @@ class Round private constructor(
         try {
             progress.validate(board)
             if (pathRules.isEmpty()) validateDirections(directions, board) else validateRules(pathRules, board)
-        } catch (failure: Exception) {
-            throw IllegalArgumentException("Invalid round progress: ${failure.message}", failure)
+        } catch (failure: RoundProgress.Failure) {
+            throw invalidProgress(failure)
+        } catch (failure: Failure) {
+            throw invalidProgress(failure)
         }
         showsFirstWord = introduces && board.placements.isNotEmpty()
         secondsLeft = seconds?.let { progress.secondsLeft ?: it }
@@ -150,15 +152,15 @@ class Round private constructor(
     }
 
     fun introduceNextLetter(): Placement? {
-        val first = board.placements.firstOrNull()
-        if (phase != Phase.INTRODUCING || first == null) return null
-        if (introduced.size < first.cells.size) {
-            introduced = first.cells.take(introduced.size + 1)
-            return null
+        val first = board.placements.firstOrNull()?.takeIf { phase == Phase.INTRODUCING } ?: return null
+        val unfinished = introduced.size < first.cells.size
+        introduced = if (unfinished) first.cells.take(introduced.size + 1) else emptyList()
+        return if (unfinished) {
+            null
+        } else {
+            phase = Phase.PLAYING
+            record(first)
         }
-        introduced = emptyList()
-        phase = Phase.PLAYING
-        return record(first)
     }
 
     fun secondPassed() {
@@ -192,12 +194,9 @@ class Round private constructor(
         val released = selection
         selection = emptyList()
         if (phase != Phase.PLAYING || released.size <= 1) return null
-        val placement = board.placements.firstOrNull { it.reads(released) }
-        if (placement == null || placement in foundPlacements) {
-            rejected = released
-            return null
-        }
-        return record(placement)
+        val placement = board.placements.firstOrNull { it.reads(released) }?.takeIf { it !in foundPlacements }
+        if (placement == null) rejected = released
+        return placement?.let(::record)
     }
 
     fun reveal(): Placement? {
@@ -267,6 +266,9 @@ class Round private constructor(
             return Round(board, directions, seconds, introduces, hintOrder, progress)
         }
 
+        private fun invalidProgress(failure: Exception) =
+            IllegalArgumentException("Invalid round progress: ${failure.message}", failure)
+
         private fun validateRules(
             rules: List<WordRule>,
             board: Board,
@@ -274,7 +276,11 @@ class Round private constructor(
             for (placement in board.placements) {
                 val selectable =
                     rules.all { it.isValid } &&
-                        rules.any { it.matches(placement) || (placement.isPalindrome && it.matches(placement.reversed)) }
+                        rules.any {
+                            it.matches(
+                                placement,
+                            ) || (placement.isPalindrome && it.matches(placement.reversed))
+                        }
                 if (!selectable) throw Failure.UnselectableWord(placement.word)
             }
         }

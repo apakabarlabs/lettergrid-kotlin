@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := build
 
-.PHONY: install-tools comments lint lint-fix format test-build test docs build clean publish publish-local publish-check
+.PHONY: install-tools comments lint detekt lint-fix format test-build test docs build clean publish publish-local publish-check
 
 install-tools:
 	python3 -m pip install --quiet --upgrade git+https://github.com/botforge-pro/commentcensor.git
@@ -10,6 +10,9 @@ comments:
 
 lint: comments
 	./gradlew ktlintCheck
+
+detekt:
+	./gradlew detekt
 
 lint-fix:
 	./gradlew ktlintFormat

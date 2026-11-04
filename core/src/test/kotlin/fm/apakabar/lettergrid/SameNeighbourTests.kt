@@ -13,7 +13,15 @@ class SameNeighbourTests {
     @Test
     fun theDefaultWeightLeavesBoardsAsTheyWere() {
         val directions = listOf(Direction.RIGHT, Direction.DOWN)
-        val plain = BoardGenerator(columns = 7, rows = 7, directions = directions, filler = LetterWeights(weights), downWords = 1..2)
+        val plain =
+            BoardGenerator(
+                columns = 7,
+                rows = 7,
+                directions = directions,
+                filler = LetterWeights(weights),
+                downWords =
+                    1..2,
+            )
         val explicit =
             BoardGenerator(
                 columns = 7,
