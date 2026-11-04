@@ -7,8 +7,11 @@ mavenPublish = "0.37.0"
 ktlintPlugin = "14.2.0"
 dokka = "2.2.0"
 kotaml = "0.112.0"
+coroutines = "1.11.0"
 
 [libraries]
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 kotaml = { group = "io.heapy.kotaml", name = "kotaml", version.ref = "kotaml" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
