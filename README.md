@@ -23,21 +23,21 @@ val round = Round(board, directions = listOf(Direction.RIGHT, Direction.DOWN))
 |---|---|
 | placement, selection, hints, optional countdown | game rules, levels, scores, persistence, colours |
 
-Compose apps draw the round with `LetterBoard` and `HiddenWordList` from `lettergrid-kotlin-ui`,
-in the colours of the app's theme:
+Compose apps draw the board with `LetterBoard` from `lettergrid-kotlin-ui`, in the colours of
+the app's theme; what a game shows around the board, such as the words to find, is the game's
+own:
 
 ```kotlin
 val style =
     LetterGridStyle(
         found = colors.foundWord, selected = colors.selectedWord, rejected = colors.missedWord,
-        hinted = colors.hintedLetter, foundText = colors.foundText, rejectionSeconds = 0.6,
+        hinted = colors.hintedLetter, rejectionSeconds = 0.6,
     )
 LetterBoard(
     round, style,
     onTouch = round::touch, onDrag = round::drag,
     onRelease = { round.release() }, onRejectionShown = round::clearRejection,
 )
-HiddenWordList(round, style, hiddenWordLabel = { pluralStringResource(R.plurals.hidden_word, it, it) })
 ```
 
 ## Install

@@ -9,7 +9,6 @@ class LetterGridStyle(
     val selected: Color,
     val rejected: Color,
     val hinted: Color,
-    val foundText: Color,
     rejectionSeconds: Double,
 ) {
     private val rejectionInterval = SleepInterval.enforcing(rejectionSeconds)
@@ -23,9 +22,8 @@ class LetterGridStyle(
         selected: Color = this.selected,
         rejected: Color = this.rejected,
         hinted: Color = this.hinted,
-        foundText: Color = this.foundText,
         rejectionSeconds: Double = this.rejectionSeconds,
-    ): LetterGridStyle = LetterGridStyle(found, selected, rejected, hinted, foundText, rejectionSeconds)
+    ): LetterGridStyle = LetterGridStyle(found, selected, rejected, hinted, rejectionSeconds)
 
     override fun equals(other: Any?): Boolean =
         other is LetterGridStyle &&
@@ -33,8 +31,7 @@ class LetterGridStyle(
             other.selected == selected &&
             other.rejected == rejected &&
             other.hinted == hinted &&
-            other.foundText == foundText &&
             other.rejectionSeconds == rejectionSeconds
 
-    override fun hashCode(): Int = listOf(found, selected, rejected, hinted, foundText, rejectionSeconds).hashCode()
+    override fun hashCode(): Int = listOf(found, selected, rejected, hinted, rejectionSeconds).hashCode()
 }
