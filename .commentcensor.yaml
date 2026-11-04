@@ -2,3 +2,5 @@ documentation: https://apakabarlabs.github.io/lettergrid-kotlin/scripts/pages.js
 
 skip:
   - build/
+  - core/build/
+  - ui/build/
