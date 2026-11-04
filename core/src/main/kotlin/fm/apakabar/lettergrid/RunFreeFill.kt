@@ -177,8 +177,7 @@ internal class RunFreeFill(
         }
     }
 
-    private fun readsTargetsOnce(candidate: Board): Boolean =
-        candidate.placements.all { candidate.hasSingleOccurrence(it.word, rules) }
+    private fun readsTargetsOnce(candidate: Board): Boolean = candidate.placements.all { candidate.hasSingleOccurrence(it.word, rules) }
 
     private fun completed(letters: List<List<String?>>): Board =
         Board(

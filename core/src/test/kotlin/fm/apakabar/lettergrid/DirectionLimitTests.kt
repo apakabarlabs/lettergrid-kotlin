@@ -2,7 +2,6 @@ package fm.apakabar.lettergrid
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -41,7 +40,7 @@ class DirectionLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("directionsAndTurns")
+    @MethodSource(TestArguments.DIRECTIONS_AND_TURNS)
     fun bentWordsCountTheirFirstSegment(
         direction: Direction,
         turns: Int,
@@ -80,7 +79,8 @@ class DirectionLimitTests {
         assertEquals(BoardGenerator.Failure.NoRoom(words, 7, 7), failure)
         val request = generator.request(listOf("CAT", "DOG"), firstDirection = Direction.RIGHT)
         for (seed in 0uL..2uL) {
-            assertEquals(setOf(Direction.RIGHT, Direction.DOWN), request.board(seed).placements.map { it.direction }.toSet())
+            val directions = request.board(seed).placements.map { it.direction }
+            assertEquals(setOf(Direction.RIGHT, Direction.DOWN), directions.toSet())
         }
     }
 
@@ -99,11 +99,5 @@ class DirectionLimitTests {
         assertEquals(original, same)
         assertNotEquals(original, capped)
         for (seed in 0uL..2uL) assertEquals(original.board(seed), same.board(seed))
-    }
-
-    companion object {
-        @JvmStatic
-        fun directionsAndTurns(): List<Arguments> =
-            Direction.entries.flatMap { direction -> (0..3).map { Arguments.of(direction, it) } }
     }
 }

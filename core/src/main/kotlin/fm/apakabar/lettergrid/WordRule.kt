@@ -6,8 +6,7 @@ data class WordRule(
 ) {
     fun matches(cells: List<Cell>): Boolean = PathGeometry(cells)?.let(::matches) ?: false
 
-    internal fun matches(geometry: PathGeometry): Boolean =
-        isValid && geometry.direction in startDirections && geometry.turns == turns
+    internal fun matches(geometry: PathGeometry): Boolean = isValid && geometry.direction in startDirections && geometry.turns == turns
 
     fun matches(placement: Placement): Boolean = matches(placement.cells)
 

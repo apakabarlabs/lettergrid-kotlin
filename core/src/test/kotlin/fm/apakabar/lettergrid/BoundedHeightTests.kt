@@ -2,7 +2,6 @@ package fm.apakabar.lettergrid
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import kotlin.test.assertEquals
@@ -93,7 +92,7 @@ class BoundedHeightTests {
     }
 
     @ParameterizedTest
-    @MethodSource("directionsAndTurns")
+    @MethodSource(TestArguments.DIRECTIONS_AND_TURNS)
     fun boundedGenerationHonoursEveryStartAndExactTurnCount(
         direction: Direction,
         turns: Int,
@@ -167,11 +166,5 @@ class BoundedHeightTests {
             assertTrue(rules.any { it.matches(placement) })
             assertEquals(1, board.occurrences(placement.word, rules = rules))
         }
-    }
-
-    companion object {
-        @JvmStatic
-        fun directionsAndTurns(): List<Arguments> =
-            Direction.entries.flatMap { direction -> (0..3).map { Arguments.of(direction, it) } }
     }
 }

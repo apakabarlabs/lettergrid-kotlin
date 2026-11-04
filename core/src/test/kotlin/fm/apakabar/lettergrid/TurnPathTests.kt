@@ -2,7 +2,6 @@ package fm.apakabar.lettergrid
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -99,7 +98,7 @@ class TurnPathTests {
 
 class TurnPathIntegrationTests {
     @ParameterizedTest
-    @MethodSource("directionsAndTurns")
+    @MethodSource(TestArguments.DIRECTIONS_AND_TURNS)
     fun generationHonoursEveryStartAndExactTurnCount(
         direction: Direction,
         turns: Int,
@@ -131,7 +130,8 @@ class TurnPathIntegrationTests {
                 downWords = 1..1,
             )
         val board = generator.request(listOf("CAT", "TAR")).board(17uL)
-        assertTrue(board.placements[0].cells.intersect(board.placements[1].cells.toSet()).isNotEmpty())
+        val shared = board.placements[0].cells intersect board.placements[1].cells.toSet()
+        assertTrue(shared.isNotEmpty())
     }
 
     @Test
@@ -246,10 +246,6 @@ class TurnPathIntegrationTests {
     }
 
     companion object {
-        @JvmStatic
-        fun directionsAndTurns(): List<Arguments> =
-            Direction.entries.flatMap { direction -> (0..3).map { Arguments.of(direction, it) } }
-
         @JvmStatic
         fun turnEnds(): List<Cell> = listOf(Cell(2, 2), Cell(2, 3))
     }

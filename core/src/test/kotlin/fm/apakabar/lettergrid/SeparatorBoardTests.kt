@@ -28,7 +28,7 @@ class SeparatorBoardTests {
 
     private fun check(example: Example) {
         val rule = WordRule(listOf(Direction.RIGHT, Direction.DOWN), example.turns)
-        val conditional = example.conditional.orEmpty().map { it.cellUppercased }.toSet()
+        val conditional = example.conditional.orEmpty().mapTo(mutableSetOf()) { it.cellUppercased }
         val generator =
             BoardGenerator(
                 columns = example.columns ?: 7,
@@ -44,7 +44,8 @@ class SeparatorBoardTests {
         }
         val request = generator.request(example.words)
         val symbols = conditional + setOf(" ", "-", "'")
-        val targets = example.words.flatMap { it.cells }.map { it.cellUppercased }.toSet().intersect(symbols)
+        val used = example.words.flatMap { it.cells }.mapTo(mutableSetOf()) { it.cellUppercased }
+        val targets = used intersect symbols
         for (seed in 1uL..3uL) {
             val board = request.board(seed)
             checkCopies(board, symbols, targets, example)

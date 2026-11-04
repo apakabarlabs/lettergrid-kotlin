@@ -161,7 +161,8 @@ class BoardGenerator private constructor(
         request: BoardRequest,
         observing: ((Duration, Duration) -> Unit)? = null,
     ): BoardRequest {
-        for (seed in 0uL until Generation.settings.fill.seeds.toULong()) {
+        val seeds = Generation.settings.fill.seeds
+        for (seed in 0uL until seeds.toULong()) {
             val start = observing?.let { TimeSource.Monotonic.markNow() }
             val targets = request.targets(seed)
             val repacking = start?.elapsedNow()
