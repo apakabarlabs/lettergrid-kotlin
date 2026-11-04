@@ -12,12 +12,56 @@ build the same board. Patch numbers are counted separately in each library, and 
 release never changes behaviour, so a seed gives the same board across patch releases; a
 minor release may change the boards.
 
-## [0.24.1] - 2026-11-04
+## [0.25.0] - 2026-11-04
+
+A word may now be one letter long, such as Hungarian `ó` or Swedish `ö`. Before, the
+generator refused such a word and no selection could find one; now it takes one cell and the
+player finds it with a tap. Boards of words that all have two letters or more are the same as
+in 0.24.0 for every seed, and every board is the same as lettergrid-swift 0.25.0 builds from
+the same seed. If your app relied on the library to refuse one-letter words, filter them out
+yourself before the request.
 
 ### Changed
 
-- Internal refactor, drop-in: the public API and the behaviour are unchanged, and a seed
-  gives the same board as in 0.24.0 and in lettergrid-swift 0.24.0.
+- `BoardGenerator.accepts` and every request accept a one-letter word. It fits only a rule
+  without turns: `WordRule.minimumLength` is now 1 for a rule without turns (it was 2) and
+  stays `turns + 2` for a turned rule, and `WordRule.minimumTurns(toFit = 1, ...)` is 0 where
+  it was `null`.
+- As for any target, a request refuses a one-letter word together with a word that contains
+  its letter: `listOf("ó", "hó")` is refused, because the longer word would hold a second
+  reading of `ó`.
+- The letter of a one-letter word stands on the board once, even when the filler weights
+  include it. Every other target character still stands at least twice, but a copy of this
+  letter would be a second occurrence of the word, so the board gets none. A player who knows
+  the word can therefore spot it by its letter alone.
+- `Round.release()` finds a one-letter word when the selection is its one cell: a `touch`
+  followed by `release` with no `drag`. `LetterBoard` already reports a tap that way. A
+  one-cell selection that finds no word returns `null` and leaves `rejected` empty, as before,
+  so a stray tap is not shown as a wrong word.
+- A one-letter placement is selectable whatever the round's directions, so `Round(board,
+  directions)` and `Round.restoring(progress, board, directions)` accept it with any nonempty
+  list.
+- The generator gives a one-letter placement the start direction of the rule that placed it,
+  and `maxWordsPerDirection` and `downWords` count it by that direction.
+  `Placement.validating(word, cells)` and `Board.validating(letters, placements)` accept a
+  placement of one cell and give it `Direction.RIGHT`, since one cell shows no direction: a
+  restored one-letter word may thus read `RIGHT` where the generator gave it `DOWN`. Nothing
+  after generation depends on that direction, because a round accepts a one-letter word under
+  any directions.
+- Internal refactor, drop-in: code shaped to detekt's defaults without changing behaviour.
+
+```kotlin
+val generator =
+    BoardGenerator(
+        columns = 7, rows = 7, directions = listOf(Direction.RIGHT, Direction.DOWN),
+        filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0)),
+    )
+val board = generator.board(listOf("cat", "dog", "ó"), seed = 1uL)
+val round = Round(board, listOf(Direction.RIGHT, Direction.DOWN))
+val island = board.placements[2].cells[0] // placements follow the order of the words
+round.touch(island)
+round.release() // the placement of "Ó": placements hold words uppercased, as for any word
+```
 
 ## [0.24.0] - 2026-11-04
 

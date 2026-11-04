@@ -16,18 +16,21 @@ class TargetCopiesTests {
         val bounded: Boolean,
         val rejects: Boolean? = null,
         val grows: Boolean? = null,
+        val alone: List<String>? = null,
+        val turns: List<Int>? = null,
+        val filler: Map<String, Double>? = null,
     )
 
     @Test
-    fun everyTargetCharacterStandsOnTheBoardAtLeastTwice() {
+    fun everyTargetCharacterButAOneLetterWordStandsOnTheBoardAtLeastTwice() {
         for (item in Fixtures.decode("target-copies", ListSerializer(Case.serializer()))) {
             val generator =
                 BoardGenerator(
                     columns = item.columns,
                     rows = item.rows,
                     maxRows = if (item.bounded) item.rows else null,
-                    rules = listOf(WordRule(listOf(Direction.RIGHT, Direction.DOWN))),
-                    filler = LetterWeights(mapOf("X" to 1.0, "Q" to 1.0)),
+                    rules = (item.turns ?: listOf(0)).map { WordRule(listOf(Direction.RIGHT, Direction.DOWN), it) },
+                    filler = LetterWeights(item.filler ?: mapOf("X" to 1.0, "Q" to 1.0)),
                 )
             if (item.rejects == true) {
                 val failure = assertFailsWith<BoardGenerator.Failure>(item.name) { generator.request(item.words) }
@@ -44,7 +47,8 @@ class TargetCopiesTests {
                 }
                 for ((character, count) in onTargets) {
                     val onBoard = board.letters.flatten().count { it == character }
-                    assertEquals(maxOf(2, count), onBoard, "${item.name}, seed $seed: $character")
+                    val alone = item.alone?.contains(character) == true
+                    assertEquals(if (alone) count else maxOf(2, count), onBoard, "${item.name}, seed $seed: $character")
                 }
             }
         }

@@ -45,14 +45,10 @@ class Placement private constructor(
             word: String,
             cells: List<Cell>,
         ): Placement {
-            val direction =
-                if (cells.size == word.cellCount && cells.size > 1 && PathGeometry(cells) != null) {
-                    Direction.between(cells[0], cells[1])
-                } else {
-                    null
-                }
-            direction ?: throw Board.Failure.InvalidPlacement(word)
-            return Placement(word, cells[0], direction, cells)
+            if (cells.size != word.cellCount || cells.isEmpty()) throw Board.Failure.InvalidPlacement(word)
+            if (cells.size == 1) return Placement(word, cells[0], Direction.RIGHT)
+            val direction = if (PathGeometry(cells) != null) Direction.between(cells[0], cells[1]) else null
+            return Placement(word, cells[0], direction ?: throw Board.Failure.InvalidPlacement(word), cells)
         }
 
         private fun checkedPath(
@@ -83,7 +79,7 @@ class Board private constructor(
 
         data class InvalidPlacement(
             val word: String,
-        ) : Failure("The placement of $word must contain at least two letters and match its board cells.")
+        ) : Failure("The placement of $word must follow a path of its letters and match its board cells.")
     }
 
     val columns: Int = letters.firstOrNull()?.size ?: 0
@@ -98,11 +94,11 @@ class Board private constructor(
     })
 
     private fun fits(placement: Placement): Boolean =
-        placement.word.cellCount > 1 &&
+        placement.word.isNotEmpty() &&
             contains(placement.start) &&
             placement.cells.size == placement.word.cellCount &&
             placement.cells.all(::contains) &&
-            PathGeometry(placement.cells) != null
+            (placement.cells.size == 1 || PathGeometry(placement.cells) != null)
 
     private fun failure(): Failure? {
         val regular = letters.isEmpty() || (columns > 0 && letters.all { it.size == columns })

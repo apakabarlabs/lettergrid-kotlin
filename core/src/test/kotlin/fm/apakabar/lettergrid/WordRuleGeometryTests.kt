@@ -36,7 +36,7 @@ class WordRuleGeometryTests {
     fun invalidGeometryIsRejected() {
         val rule = WordRule(listOf(Direction.RIGHT))
         assertFalse(rule.canFit(0, 7))
-        assertFalse(rule.canFit(1, 7))
+        assertFalse(WordRule(listOf(Direction.RIGHT), 1).canFit(1, 7))
         assertFalse(rule.canFit(3, 0))
         assertFalse(rule.canFit(3, 7, 0))
         assertFalse(WordRule(emptyList()).canFit(3, 7))

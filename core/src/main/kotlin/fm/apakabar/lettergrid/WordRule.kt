@@ -4,7 +4,8 @@ data class WordRule(
     val startDirections: List<Direction>,
     val turns: Int = 0,
 ) {
-    fun matches(cells: List<Cell>): Boolean = PathGeometry(cells)?.let(::matches) ?: false
+    fun matches(cells: List<Cell>): Boolean =
+        if (cells.size == 1) isValid && turns == 0 else PathGeometry(cells)?.let(::matches) ?: false
 
     internal fun matches(geometry: PathGeometry): Boolean =
         isValid && geometry.direction in startDirections && geometry.turns == turns
@@ -34,7 +35,13 @@ data class WordRule(
     }
 
     val isValid: Boolean get() = startDirections.isNotEmpty() && turns in supportedTurns
-    val minimumLength: Int get() = if (isValid) turns + 2 else Int.MAX_VALUE
+    val minimumLength: Int
+        get() =
+            when {
+                !isValid -> Int.MAX_VALUE
+                turns == 0 -> 1
+                else -> turns + 2
+            }
 
     companion object {
         fun minimumTurns(

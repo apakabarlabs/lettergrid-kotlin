@@ -90,12 +90,10 @@ internal class RunFreeFill(
                 if (letters[row][column] == null) empty += Cell(row, column)
             }
         }
-        val counts = mutableMapOf<String, Int>()
-        for (letter in letters.flatten().filterNotNull()) counts[letter] = (counts[letter] ?: 0) + 1
         return Template(
             letters = letters,
             empty = empty,
-            required = counts.filter { it.value < 2 }.keys,
+            required = board.placements.lettersNeedingCopies(letters.flatten().filterNotNull()),
             targets = WordIndex(board.placements.map { it.word }.toSet()),
         )
     }
@@ -330,8 +328,12 @@ internal fun Layout.charactersToCopyIfRoom(columns: Int): Set<String>? {
     for (placement in placements) {
         for ((cell, letter) in placement.cells.zip(placement.word.cells)) letters[cell] = letter
     }
-    val counts = mutableMapOf<String, Int>()
-    for (letter in letters.values) counts[letter] = (counts[letter] ?: 0) + 1
-    val needing = counts.filter { it.value < 2 }.keys
+    val needing = placements.lettersNeedingCopies(letters.values.toList())
     return if (needing.size <= rows * columns - letters.size) needing else null
+}
+
+internal fun List<Placement>.lettersNeedingCopies(placed: List<String>): Set<String> {
+    val counts = placed.groupingBy { it }.eachCount()
+    val oneLetterWords = filter { it.word.cellCount == 1 }.map { it.word }.toSet()
+    return counts.filter { it.value < 2 }.keys - oneLetterWords
 }

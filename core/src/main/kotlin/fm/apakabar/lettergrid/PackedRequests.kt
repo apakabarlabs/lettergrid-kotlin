@@ -29,7 +29,7 @@ private class WordAcceptance(
         val excluded = generator.conditionalCharacters + upper.flatMap { it.cells }.filter { !it.isLetterCell }
         return upper.isNotEmpty() &&
             upper.toSet().size == upper.size &&
-            upper.all { it.cellCount > 1 } &&
+            upper.all { it.isNotEmpty() } &&
             upper.none { word -> upper.any { it != word && it.containsCells(word) } } &&
             generator.filler.letters(excluding = excluded) != null
     }

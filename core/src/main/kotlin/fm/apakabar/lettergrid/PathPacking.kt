@@ -252,6 +252,7 @@ internal data class PathPacking(
         accepting: (Placement) -> Boolean,
     ): List<Candidate> {
         val seen = mutableSetOf<List<Cell>>()
+        val oneCellDirections = mutableSetOf<Direction>()
         val shapes =
             rules.flatMap { rule ->
                 rule.startDirections.flatMap { direction ->
@@ -263,14 +264,19 @@ internal data class PathPacking(
                         maximumRows = rows,
                         visitedLimit = null,
                         randomized = false,
-                    ).cells()
+                    ).cells().map { direction to it }
                 }
             }
         val found = mutableListOf<Candidate>()
-        for (shape in shapes) {
+        for ((direction, shape) in shapes) {
             val height = (shape.maxOfOrNull { it.row } ?: 0) + 1
             val width = (shape.maxOfOrNull { it.column } ?: 0) + 1
-            val lone = if (height <= rows && width <= columns && seen.add(shape)) Placement(word, shape) else null
+            val lone =
+                when {
+                    height > rows || width > columns -> null
+                    shape.size == 1 -> Placement(word, shape[0], direction).takeIf { oneCellDirections.add(direction) }
+                    else -> Placement(word, shape).takeIf { seen.add(shape) }
+                }
             if (lone != null && accepting(lone)) found += shifts(lone, height, width)
         }
         return found

@@ -95,10 +95,11 @@ class BoardGeneratorTests {
     }
 
     @Test
-    fun targetsTooShortForASelectionAreRejected() {
-        for (word in listOf("", "A")) {
-            assertFailsWith<BoardGenerator.Failure> { generator().board(listOf(word), 1uL) }
-        }
+    fun anEmptyTargetIsRejectedAndAOneLetterTargetTakesOneCell() {
+        assertFailsWith<BoardGenerator.Failure> { generator().board(listOf(""), 1uL) }
+        val board = generator().board(listOf("A"), 1uL)
+        assertEquals(listOf(1), board.placements.map { it.cells.size })
+        assertEquals(1, board.letters.flatten().count { it == "A" })
     }
 
     @Test

@@ -193,9 +193,9 @@ class Round private constructor(
     fun release(): Placement? {
         val released = selection
         selection = emptyList()
-        if (phase != Phase.PLAYING || released.size <= 1) return null
+        if (phase != Phase.PLAYING || released.isEmpty()) return null
         val placement = board.placements.firstOrNull { it.reads(released) }?.takeIf { it !in foundPlacements }
-        if (placement == null) rejected = released
+        if (placement == null && released.size > 1) rejected = released
         return placement?.let(::record)
     }
 
@@ -290,8 +290,10 @@ class Round private constructor(
             board: Board,
         ) {
             for (placement in board.placements) {
+                val oneCell = placement.cells.size == 1 && directions.isNotEmpty()
                 val selectable =
-                    placement.turns == 0 &&
+                    oneCell ||
+                        placement.turns == 0 &&
                         (
                             placement.direction in directions ||
                                 (placement.isPalindrome && placement.direction.opposite in directions)
