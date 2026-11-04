@@ -12,8 +12,9 @@ wikilayer://wikilayer.org/smee-again/codestyle
   Maven Central publication under `fm.apakabar`, made by the release workflow.
 - Two modules, as the Swift package has two targets: `core` (`lettergrid-kotlin`) is plain
   Kotlin on the JVM, as `LetterGrid` is plain Swift, and is tested in CI; `ui`
-  (`lettergrid-kotlin-ui`) holds the Compose board and word list, as `LetterGridUI` holds the
-  SwiftUI ones, with colours from the app's theme.
+  (`lettergrid-kotlin-ui`) holds the Compose board, as `LetterGridUI` holds the SwiftUI one,
+  with colours from the app's theme. What a game shows around the board, such as the words to
+  find, stays in that game.
 - The shared cases and the generation tuning are copies of the Swift port's files, written here
   by its `make sync-yaml`; a test compares each with the Swift port's `main` byte for byte.
 - Only what any app with a letter grid needs lives here. A game's own rules stay in that app.

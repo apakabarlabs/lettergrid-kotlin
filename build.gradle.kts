@@ -9,7 +9,7 @@ plugins {
 }
 
 val released =
-    Regex("""^## (\d+\.\d+\.\d+)$""", RegexOption.MULTILINE)
+    Regex("""^## \[(\d+\.\d+\.\d+)] - \d{4}-\d{2}-\d{2}$""", RegexOption.MULTILINE)
         .find(file("CHANGELOG.md").readText())
         ?.groupValues
         ?.get(1)
