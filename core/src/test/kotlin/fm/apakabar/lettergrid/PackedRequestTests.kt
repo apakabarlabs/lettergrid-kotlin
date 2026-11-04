@@ -26,11 +26,15 @@ class PackedRequestTests {
         val failure: String? = null,
         val downWords: List<Int>? = null,
         val maxWordsPerDirection: Int? = null,
+        val largestDirectionCap: Boolean? = null,
         val legacyEquivalent: Boolean? = null,
         val words: List<String>,
         val accepted: Boolean? = null,
         val fits: Boolean,
     ) {
+        val directionCap: Int?
+            get() = if (largestDirectionCap == true) Int.MAX_VALUE else maxWordsPerDirection
+
         val leading: List<WordRule>
             get() = leadingRules?.map { it.wordRule } ?: listOfNotNull(firstRule?.wordRule)
 
@@ -56,7 +60,7 @@ class PackedRequestTests {
                     rules = rules,
                     filler = LetterWeights(mapOf("q" to 1.0, "w" to 1.0)),
                     downWords = item.downWords?.let { it[0]..it[1] } ?: if (item.words.size == 1) 0..1 else 1..2,
-                    maxWordsPerDirection = item.maxWordsPerDirection,
+                    maxWordsPerDirection = item.directionCap,
                 )
             assertEquals(item.accepted ?: true, generator.accepts(item.words, leadingRules = item.leading), item.name)
             if (!item.fits) {
@@ -72,7 +76,7 @@ class PackedRequestTests {
             }
             val request = item.request(generator)
             assertEquals(item.leading, request.leadingRules)
-            assertEquals(item.maxWordsPerDirection, request.maxWordsPerDirection)
+            assertEquals(item.directionCap, request.maxWordsPerDirection)
             if (item.legacyEquivalent == true) assertEquals(item.legacyRequest(generator), request, item.name)
             val layouts = mutableSetOf<List<Placement>>()
             for (seed in 1uL..4uL) {
@@ -97,7 +101,7 @@ class PackedRequestTests {
         board: Board,
         item: Case,
     ) {
-        val maximum = item.maxWordsPerDirection ?: return
+        val maximum = item.directionCap ?: return
         val counts = board.placements.groupBy { it.direction }
         assertTrue(counts.values.all { it.size <= maximum }, item.name)
     }
