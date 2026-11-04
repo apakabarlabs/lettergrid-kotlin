@@ -9,7 +9,8 @@ This library is the Kotlin version of the Swift library
 behaviour it follows. Every minor version of the Swift library gets a Kotlin release with
 the same major and minor number, and the two behave the same: given the same seed, both
 build the same board. Patch numbers are counted separately in each library, and a patch
-release never changes behaviour.
+release never changes behaviour, so a seed gives the same board across patch releases; a
+minor release may change the boards.
 
 ## [0.24.1] - 2026-11-04
 
@@ -24,8 +25,8 @@ What an app shows around the board, such as the list of words still to find, now
 the app: `HiddenWordList` is removed, and `LetterBoard` is the only view the library draws.
 Code that passes `foundText` to `LetterGridStyle` or its `copy` no longer compiles, and since
 the parameter had no default, that is every app which builds a style. Code that calls
-`HiddenWordList` no longer compiles either. The board, the round and their data are
-unchanged.
+`HiddenWordList` no longer compiles either. The API and behaviour of the board and the round
+are unchanged, and a seed gives the same board as in 0.23.0.
 
 ### Removed
 
@@ -102,19 +103,24 @@ same board as in Swift, and both libraries pass the same set of test cases.
     and the round accepts the selection when it reads a hidden word and rejects it
     otherwise. On request it reveals a letter of a word not yet found, as a hint, and it
     keeps the found words and revealed letters as `round.progress`. A round can have a time
-    limit, and is lost when it runs out. `Countdown` drives a round's time: it shows the
-    first word letter by letter at the pace the app sets, then counts the round's seconds
-    down.
-  - A seed alone does not give the same board after a library update. To save a game, save
+    limit, and is lost when it runs out. A round can also open with an introduction: before
+    play starts, it points out the first hidden word on the board one letter at a time, to
+    show the player what a hidden word looks like. `Countdown` drives both: it calls the app
+    back once per letter of the introduction, at the pace the app sets, and then once a
+    second while the time limit runs down.
+  - A patch release keeps the boards a seed gives, but a minor release may change them, so a
+    seed alone does not bring back a saved board across a minor update. To save a game, save
     the board's `letters` and `placements` and the round's `progress`; to restore it, pass
-    them to `Board.validating`, `Placement.validating` and `Round.restoring`. These throw a
-    `Board.Failure`, `RoundProgress.Failure` or `Round.Failure` that names what is wrong
-    with the saved data, so the app can catch it and show it. The plain constructors throw
+    them to `Placement.validating`, `Board.validating` and `Round.restoring`. The first two
+    throw a `Board.Failure`, and `Round.restoring` a `RoundProgress.Failure` for bad
+    progress or a `Round.Failure` for rules the board does not follow. Each names what is
+    wrong with the saved data, so the app can catch it and show it. The plain constructors throw
     `IllegalArgumentException` instead, the exception Kotlin uses for a programming mistake.
 - `lettergrid-kotlin-ui`, Compose views on Android 9 (API 28) or later:
   - `LetterBoard` draws the round and takes the player's touches.
   - `HiddenWordList` lists the words to find.
   - `LetterGridStyle` holds the colours from the app's theme: found and selected words, a
-    rejected selection, which flashes for `rejectionSeconds`, and hinted letters.
+    rejected selection, which flashes for `rejectionSeconds`, hinted letters, and
+    `foundText` for found words in `HiddenWordList`.
   - `LetterHighlight` draws a thick line with rounded ends through the cells of a selected
     or found word.
