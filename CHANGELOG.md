@@ -6,7 +6,7 @@ All notable changes to this library are documented here. The format follows
 [lettergrid-swift](https://github.com/apakabarlabs/lettergrid-swift), whose names and
 behaviour it follows; major and minor versions match it.
 
-## Unreleased
+## 0.23.0
 
 The first release: lettergrid-swift 0.23.0 in Kotlin. A seed gives the board it gives in
 Swift, and the shared cases of both ports pass on each.
