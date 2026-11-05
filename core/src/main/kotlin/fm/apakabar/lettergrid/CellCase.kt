@@ -7,12 +7,12 @@ val String.cellUppercased: String
     get() =
         Normalizer.normalize(this, Normalizer.Form.NFC).cells.joinToString("") { letter ->
             val upper = Normalizer.normalize(letter.uppercase(), Normalizer.Form.NFC)
-            if (upper.cells.size == 1) upper else letter
+            if (upper.isOneCell) upper else letter
         }
 
 val String.cells: List<String>
     get() {
-        val boundaries = BreakIterator.getCharacterInstance()
+        val boundaries = characterBoundaries.get()
         boundaries.setText(this)
         val cells = mutableListOf<String>()
         var start = boundaries.first()
@@ -24,6 +24,17 @@ val String.cells: List<String>
         }
         return cells
     }
+
+private val String.isOneCell: Boolean
+    get() {
+        val boundaries = characterBoundaries.get()
+        boundaries.setText(this)
+        boundaries.first()
+        return boundaries.next() != BreakIterator.DONE && boundaries.next() == BreakIterator.DONE
+    }
+
+private val characterBoundaries: ThreadLocal<BreakIterator> =
+    ThreadLocal.withInitial { BreakIterator.getCharacterInstance() }
 
 internal val String.cellCount: Int get() = cells.size
 

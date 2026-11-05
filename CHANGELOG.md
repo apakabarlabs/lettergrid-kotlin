@@ -12,6 +12,14 @@ build the same board. Patch numbers are counted separately in each library, and 
 release never changes behaviour, so a seed gives the same board across patch releases; a
 minor release may change the boards.
 
+## [0.26.1] - 2026-11-05
+
+Splitting text into cells is faster: `cells` and `cellUppercased` reuse one character
+iterator per thread instead of creating one per call and, for `cellUppercased`, one more per
+letter. The cells, and so every board, are unchanged. On an Android phone, an app that
+uppercases the 9000 words of each of seven vocabularies now opens them in 10.0 s instead of
+21.0 s.
+
 ## [0.26.0] - 2026-11-05
 
 Settings now come in small groups, and word directions are expressed only through rules,

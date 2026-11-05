@@ -12,6 +12,15 @@ class CellCaseTests {
     }
 
     @Test
+    fun cellsFollowGraphemeClustersOnEveryCall() {
+        val decomposed = "été"
+        repeat(2) {
+            assertEquals(listOf("é", "t", "é"), decomposed.cells)
+            assertEquals("ÉTÉ", decomposed.cellUppercased)
+        }
+    }
+
+    @Test
     fun fillerKeepsALetterWithALongerCapital() {
         val filler = LetterWeights(mapOf("ե" to 1.0, "և" to 1.0, "ր" to 1.0))
         assertEquals(3, filler.letterCount)
