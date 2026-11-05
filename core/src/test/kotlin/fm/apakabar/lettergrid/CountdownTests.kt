@@ -15,7 +15,7 @@ class CountdownTests {
     private class SleepFailure : Exception()
 
     private val board = Board(listOf("CAT".cells), listOf(Placement("CAT", Cell(0, 0), Direction.RIGHT)))
-    private val right = listOf(Direction.RIGHT)
+    private val right = listOf(WordRule.straight(listOf(Direction.RIGHT)))
 
     @ParameterizedTest
     @ValueSource(
@@ -26,7 +26,7 @@ class CountdownTests {
     )
     fun invalidIntervalsAreReportedBeforeSleeping(seconds: Double) =
         runTest {
-            val round = Round(board, right, introduces = true)
+            val round = Round(board, right, RoundOptions(introduces = true))
             val failure =
                 assertFailsWith<Countdown.Failure> {
                     Countdown { throw SleepFailure() }.run(round, seconds, introduce = {}, tick = {})
@@ -37,8 +37,8 @@ class CountdownTests {
     @Test
     fun callbacksThatDoNotAdvanceTheRoundFailInsteadOfLoopingForever() =
         runTest {
-            val introduction = Round(board, right, introduces = true)
-            val playing = Round(board, right, seconds = 1)
+            val introduction = Round(board, right, RoundOptions(introduces = true))
+            val playing = Round(board, right, RoundOptions(seconds = 1))
             assertEquals(
                 Countdown.Failure.NoIntroductionProgress,
                 assertFailsWith<Countdown.Failure> { Countdown {}.run(introduction, 0.1, introduce = {}, tick = {}) },
@@ -52,7 +52,7 @@ class CountdownTests {
     @Test
     fun aSleepFailureReachesTheCaller() =
         runTest {
-            val round = Round(board, right, seconds = 1)
+            val round = Round(board, right, RoundOptions(seconds = 1))
             assertFailsWith<SleepFailure> {
                 Countdown { throw SleepFailure() }.run(round, 0.1, introduce = {}, tick = { round.secondPassed() })
             }
@@ -62,7 +62,7 @@ class CountdownTests {
     @Test
     fun cancellationDuringSleepDoesNotTickEvenIfSleepReturnsNormally() =
         runTest {
-            val round = Round(board, right, seconds = 1)
+            val round = Round(board, right, RoundOptions(seconds = 1))
             var ticks = 0
             val job =
                 launch {
@@ -85,7 +85,7 @@ class CountdownTests {
     @Test
     fun cancellationDuringIntroductionDoesNotRevealAnotherLetter() =
         runTest {
-            val round = Round(board, right, introduces = true)
+            val round = Round(board, right, RoundOptions(introduces = true))
             val job =
                 launch {
                     Countdown { currentCoroutineContext().job.cancel() }.run(
@@ -103,7 +103,7 @@ class CountdownTests {
     @Test
     fun aRoundFinishedDuringSleepDoesNotReceiveAStaleTick() =
         runTest {
-            val round = Round(board, right, seconds = 1)
+            val round = Round(board, right, RoundOptions(seconds = 1))
             var ticks = 0
             Countdown {
                 round.touch(Cell(0, 0))

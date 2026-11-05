@@ -64,7 +64,9 @@ class TurnPathTests {
     fun straightOnlyRestorationRejectsABentPlacement() {
         val board = Board(bentBoardLetters, listOf(Placement("ABCDE", path)))
         val failure =
-            assertFailsWith<Round.Failure> { Round.restoring(RoundProgress(), board, directions = Direction.entries) }
+            assertFailsWith<Round.Failure> {
+                Round.restoring(RoundProgress(), board, rules = listOf(WordRule.straight(Direction.entries)))
+            }
         assertEquals(Round.Failure.UnselectableWord("ABCDE"), failure)
     }
 
@@ -107,16 +109,9 @@ class TurnPathIntegrationTests {
         val rule = WordRule(listOf(direction), turns)
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
+                size = BoardSize(7, 7),
                 rules = listOf(rule),
-                filler =
-                    LetterWeights(
-                        mapOf(
-                            "x" to 1.0,
-                            "q" to 1.0,
-                        ),
-                    ),
+                filler = Filler(LetterWeights(mapOf("x" to 1.0, "q" to 1.0))),
             )
         val board = generator.request(listOf("ABCDEF"), firstRule = rule).board(12uL)
         assertTrue(rule.matches(board.placements[0]))
@@ -128,13 +123,9 @@ class TurnPathIntegrationTests {
         val rule = WordRule(listOf(Direction.RIGHT), 3)
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
+                size = BoardSize(7, 7),
                 rules = listOf(rule),
-                filler =
-                    LetterWeights(
-                        mapOf("x" to 1.0),
-                    ),
+                filler = Filler(LetterWeights(mapOf("x" to 1.0))),
             )
         assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("ABCD"), firstRule = rule) }
     }
@@ -144,11 +135,10 @@ class TurnPathIntegrationTests {
         val rule = WordRule(listOf(Direction.RIGHT, Direction.DOWN))
         val generator =
             BoardGenerator(
-                columns = 4,
-                rows = 4,
+                size = BoardSize(4, 4),
                 rules = listOf(rule),
-                filler = LetterWeights(mapOf("x" to 1.0, "y" to 1.0, "z" to 1.0, "q" to 1.0)),
-                downWords = 1..1,
+                filler = Filler(LetterWeights(mapOf("x" to 1.0, "y" to 1.0, "z" to 1.0, "q" to 1.0))),
+                limits = PlacementLimits(downWords = 1..1),
             )
         val board = generator.request(listOf("CAT", "TAR")).board(17uL)
         val shared = board.placements[0].cells intersect board.placements[1].cells.toSet()
@@ -183,11 +173,10 @@ class TurnPathIntegrationTests {
         val words = listOf("PLANET", "ORBIT", "LUNAR")
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
+                size = BoardSize(7, 7),
                 rules = rules,
-                filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0)),
-                downWords = 1..2,
+                filler = Filler(LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0))),
+                limits = PlacementLimits(downWords = 1..2),
             )
         val board = generator.request(words, firstRule = required).board(73uL)
         assertTrue(required.matches(board.placements[0]))
@@ -236,10 +225,23 @@ class TurnPathIntegrationTests {
         val filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0))
         val ways = listOf(Direction.RIGHT, Direction.DOWN, Direction.DOWN_RIGHT)
         val rules = listOf(WordRule(listOf(Direction.RIGHT, Direction.DOWN)), WordRule(listOf(Direction.DOWN_RIGHT)))
-        val straight = BoardGenerator(columns = 7, rows = 7, directions = ways, filler = filler, downWords = 1..2)
-        val generic = BoardGenerator(columns = 7, rows = 7, rules = rules, filler = filler, downWords = 1..2)
+        val straight =
+            BoardGenerator(
+                BoardSize(7, 7),
+                listOf(WordRule.straight(ways)),
+                Filler(filler),
+                PlacementLimits(1..2),
+            )
+        val generic =
+            BoardGenerator(
+                BoardSize(7, 7),
+                rules = rules,
+                filler = Filler(filler),
+                limits =
+                    PlacementLimits(1..2),
+            )
         val words = listOf("PLANET", "ORBIT", "STAR")
-        val expected = straight.request(words, firstDirection = Direction.DOWN_RIGHT).board(19uL)
+        val expected = straight.request(words, firstRule = WordRule.straight(listOf(Direction.DOWN_RIGHT))).board(19uL)
         val actual = generic.request(words, firstRule = rules[1]).board(19uL)
         assertEquals(expected, actual)
     }
@@ -265,17 +267,9 @@ class TurnPathIntegrationTests {
         val rule = WordRule(listOf(Direction.RIGHT), 3)
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
+                size = BoardSize(7, 7),
                 rules = listOf(rule),
-                filler =
-                    LetterWeights(
-                        mapOf(
-                            "x" to 1.0,
-                            "q" to 1.0,
-                            "z" to 1.0,
-                        ),
-                    ),
+                filler = Filler(LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0))),
             )
         for (word in listOf("PLANET", "GALAXY", "COMETS", "NEBULA")) {
             val first = generator.request(listOf(word), firstRule = rule).board(1uL)

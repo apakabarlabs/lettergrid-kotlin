@@ -26,12 +26,10 @@ class RepeatedLettersTests {
         assertFalse(hasAddedRun(reference))
         val generator =
             BoardGenerator(
-                columns = width,
-                rows = 3,
-                maxRows = 3,
-                directions = listOf(Direction.DOWN),
-                filler = LetterWeights(mapOf("X" to 1.0)),
-                downWords = width..width,
+                size = BoardSize(width, 3, 3),
+                rules = listOf(WordRule.straight(listOf(Direction.DOWN))),
+                filler = Filler(LetterWeights(mapOf("X" to 1.0))),
+                limits = PlacementLimits(downWords = width..width),
             )
         assertFalse(hasAddedRun(generator.request(words).board(42uL)))
     }
@@ -40,11 +38,9 @@ class RepeatedLettersTests {
     fun anImpossibleAlphabetIsRefusedDuringPreparation() {
         val generator =
             BoardGenerator(
-                columns = 4,
-                rows = 4,
-                maxRows = 4,
-                directions = listOf(Direction.RIGHT),
-                filler = LetterWeights(mapOf("X" to 1.0)),
+                size = BoardSize(4, 4, 4),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT))),
+                filler = Filler(LetterWeights(mapOf("X" to 1.0))),
             )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("AB")) }
         assertEquals(BoardGenerator.Failure.Unsettled(listOf("AB"), 4, 4), failure)
@@ -55,11 +51,9 @@ class RepeatedLettersTests {
     fun forbiddenTargetRunsAreARefillFailureRatherThanMissingGeometry(words: List<String>) {
         val generator =
             BoardGenerator(
-                columns = 3,
-                rows = 3,
-                maxRows = 3,
-                directions = listOf(Direction.DOWN),
-                filler = LetterWeights(mapOf("X" to 1.0, "Y" to 1.0, "Z" to 1.0)),
+                size = BoardSize(3, 3, 3),
+                rules = listOf(WordRule.straight(listOf(Direction.DOWN))),
+                filler = Filler(LetterWeights(mapOf("X" to 1.0, "Y" to 1.0, "Z" to 1.0))),
             )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(words) }
         assertEquals(BoardGenerator.Failure.Unsettled(listOf("TAB", "TBA", "TAA"), 3, 3), failure)
@@ -82,11 +76,9 @@ class RepeatedLettersTests {
             val rules = listOf(WordRule(Direction.entries, item.turns))
             val request =
                 BoardGenerator(
-                    columns = item.columns,
-                    rows = item.rows,
-                    maxRows = item.rows,
+                    size = BoardSize(item.columns, item.rows, item.rows),
                     rules = rules,
-                    filler = LetterWeights(item.weights),
+                    filler = Filler(LetterWeights(item.weights)),
                 ).request(item.words)
             val signatures = mutableMapOf<String, Int>()
             for (seed in 100uL until 164uL) {

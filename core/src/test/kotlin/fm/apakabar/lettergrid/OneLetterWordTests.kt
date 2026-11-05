@@ -45,7 +45,7 @@ class OneLetterWordTests {
 
     @Test
     fun aTapOnTheCellOfAOneLetterWordFindsIt() {
-        val round = Round(board, listOf(Direction.RIGHT, Direction.DOWN))
+        val round = Round(board, listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN))))
         val word = board.placements[1]
 
         round.touch(Cell(1, 5))
@@ -57,7 +57,7 @@ class OneLetterWordTests {
 
     @Test
     fun aTapElsewhereFindsNothingAndShowsNoRejection() {
-        val round = Round(board, listOf(Direction.RIGHT, Direction.DOWN))
+        val round = Round(board, listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN))))
 
         round.touch(Cell(0, 0))
 
@@ -68,7 +68,7 @@ class OneLetterWordTests {
 
     @Test
     fun aOneLetterWordIsFoundOnceAndThenATapOnItDoesNothing() {
-        val round = Round(board, listOf(Direction.RIGHT, Direction.DOWN))
+        val round = Round(board, listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN))))
         round.touch(Cell(1, 5))
         round.release()
 
@@ -81,10 +81,10 @@ class OneLetterWordTests {
     @Test
     fun aOneLetterWordIsSelectableWhateverTheRoundDirections() {
         val lone = Board(listOf("XÖ".cells), listOf(Placement("Ö", listOf(Cell(0, 1)))))
-        val restored = Round.restoring(RoundProgress(), lone, listOf(Direction.DOWN))
+        val restored = Round.restoring(RoundProgress(), lone, listOf(WordRule.straight(listOf(Direction.DOWN))))
         assertFalse(restored.isOver)
 
-        val round = Round(lone, listOf(Direction.DOWN))
+        val round = Round(lone, listOf(WordRule.straight(listOf(Direction.DOWN))))
         round.touch(Cell(0, 1))
         assertEquals(lone.placements[0], round.release())
     }
@@ -93,10 +93,9 @@ class OneLetterWordTests {
     fun aOneLetterWordTakesTheDirectionOfTheRuleThatPlacedIt() {
         val generator =
             BoardGenerator(
-                columns = 5,
-                rows = 5,
+                size = BoardSize(5, 5),
                 rules = listOf(WordRule(listOf(Direction.DOWN))),
-                filler = LetterWeights(mapOf("X" to 1.0, "Q" to 1.0)),
+                filler = Filler(LetterWeights(mapOf("X" to 1.0, "Q" to 1.0))),
             )
         val board = generator.request(listOf("CAT", "I")).board(1uL)
 

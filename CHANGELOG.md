@@ -12,6 +12,80 @@ build the same board. Patch numbers are counted separately in each library, and 
 release never changes behaviour, so a seed gives the same board across patch releases; a
 minor release may change the boards.
 
+## [0.26.0] - 2026-11-05
+
+Settings now come in small groups, and word directions are expressed only through rules,
+matching lettergrid-swift 0.26.0. This breaks calls that create a `BoardGenerator`, a `Round`
+or a `LetterBoard`. Boards built from the same settings and seed remain unchanged. Straight
+selection keeps the old `directions` behaviour; callers already using straight `rules` get
+the two selection changes described below.
+
+Before:
+
+```kotlin
+val generator = BoardGenerator(
+    columns = 7, rows = 7, maxRows = 9, directions = directions,
+    filler = weights, downWords = 1..2, conditionalCharacters = setOf("-"),
+    maxWordsPerDirection = 2,
+)
+val board = generator.board(words, seed = 42uL, firstDirection = Direction.RIGHT)
+val round = Round(board, directions, seconds = 60, introduces = true)
+LetterBoard(round, style, onTouch, onDrag, onRelease, onRejectionShown)
+```
+
+After:
+
+```kotlin
+val rules = listOf(WordRule.straight(directions))
+val generator = BoardGenerator(
+    size = BoardSize(columns = 7, rows = 7, maxRows = 9), rules = rules,
+    filler = Filler(weights, conditionalCharacters = setOf("-")),
+    limits = PlacementLimits(downWords = 1..2, maxWordsPerDirection = 2),
+)
+val board = generator.board(words, seed = 42uL, firstRule = WordRule.straight(listOf(Direction.RIGHT)))
+val round = Round(board, rules, options = RoundOptions(seconds = 60, introduces = true))
+LetterBoard(round, style, actions = LetterBoardActions(onTouch, onDrag, onRelease, onRejectionShown))
+```
+
+### Changed
+
+- Both old generator constructors become `BoardGenerator(size, rules, filler, limits)`.
+  `BoardSize(columns, rows, maxRows = null)` keeps the dimensions and optional maximum height.
+  `Filler(weights, conditionalCharacters = emptySet())` keeps the weights and conditional
+  characters. `limits` defaults to `PlacementLimits()`: `downWords = 0..Int.MAX_VALUE` and
+  `maxWordsPerDirection = null`, so neither quota restricts placement by default.
+- Read the generator's former public properties through their groups: `columns`, `rows` and
+  `maxRows` through `size`; `conditionalCharacters` through `filler`; `downWords` and
+  `maxWordsPerDirection` through `limits`. The former `generator.filler` is now
+  `generator.filler.weights`. To collect enabled directions, use
+  `generator.rules.flatMap { it.startDirections }.distinct()`.
+- `directions` is removed from the generator and round; use
+  `rules = listOf(WordRule.straight(directions))`. The helper makes a rule with no turns.
+- `firstDirection` is removed from `request`, `checkPlacement`, `board` and `BoardRequest`.
+  Pass `firstRule = WordRule.straight(listOf(direction))`, and read it as
+  `request.firstRule?.startDirections?.firstOrNull()`. No first rule means `null`.
+  `accepts(words, firstRule)` is unchanged. A first rule may narrow an enabled rule's start
+  directions with the same turn count, just as a leading rule may. A disabled first rule
+  throws `InvalidConfiguration`; a disabled first direction used to throw `NoRoom`, so update
+  any catch that handled that case.
+- `Round(board, rules, options, progress)` and `Round.restoring(progress, board, rules, options)`
+  replace both old variants. `RoundOptions()` keeps the defaults: `seconds = null`,
+  `introduces = false`, `hintOrder = HintOrder.FROM_START`. Progress stays separate; public
+  round properties remain unchanged. `UnselectableWord` now mentions rules instead of
+  directions; its type and word remain unchanged.
+- Straight selection uses the order of start directions to break ties, and projects a drag
+  beyond the board onto its last cell. This preserves the old `directions` path. The old
+  straight `rules` path used `Direction.entries` order for ties and ignored drags beyond
+  the board; both now follow the same straight-selection behaviour.
+- `LetterBoard` takes its four callbacks as `actions = LetterBoardActions(onTouch, onDrag,
+  onRelease, onRejectionShown)`, with all four required. Its other parameters keep their
+  defaults. Compose uses the current callbacks after recomposition, including during a drag.
+  The Compose view keeps seven parameters because it also takes the platform's `modifier`;
+  with the owner's agreement, detekt's parameter-count check excludes `@Composable`
+  functions. The check and its threshold remain unchanged for other functions.
+- Forbidden equal-letter runs read `fill.runLength` from the package's `generation.yaml`,
+  with a minimum of two, matching Swift. It remains three, so generated boards do not change.
+
 ## [0.25.0] - 2026-11-04
 
 A word may now be one letter long, such as Hungarian `ó` or Swedish `ö`. Before, the

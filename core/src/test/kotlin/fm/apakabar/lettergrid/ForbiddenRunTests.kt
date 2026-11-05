@@ -29,7 +29,12 @@ class ForbiddenRunTests {
                     .mapValues { it.value.toDouble() },
             )
         val generator =
-            BoardGenerator(columns = 7, rows = 7, maxRows = 7, rules = rules, filler = filler, maxWordsPerDirection = 2)
+            BoardGenerator(
+                size = BoardSize(columns = 7, rows = 7, maxRows = 7),
+                rules = rules,
+                filler = Filler(filler),
+                limits = PlacementLimits(maxWordsPerDirection = 2),
+            )
         val request = generator.request(words, leadingRules = emptyList())
         assertEquals(words.toSet(), request.words.toSet())
     }

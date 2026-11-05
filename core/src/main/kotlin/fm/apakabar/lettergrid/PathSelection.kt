@@ -8,8 +8,9 @@ fun Board.selection(
     val start = extending.firstOrNull()
     val index = extending.indexOf(toward)
     return when {
-        start == null || !contains(toward) -> extending
-        rules.all { it.turns == 0 } -> selection(start, toward, rules.startDirections)
+        start == null -> extending
+        rules.all { it.turns == 0 } -> selection(start, toward, rules.startDirectionsInOrder)
+        !contains(toward) -> extending
         index >= 0 -> extending.take(index + 1)
         else ->
             firstSegmentSelection(extending, toward, rules)

@@ -38,21 +38,17 @@ class PlacementCheckTests {
             val quota = downWords[0]..downWords[1]
             if (rules != null) {
                 return BoardGenerator(
-                    columns,
-                    rows,
-                    maxRows,
+                    BoardSize(columns, rows, maxRows),
                     rules = rules.map { it.value },
-                    filler = filler,
-                    downWords = quota,
+                    filler = Filler(filler),
+                    limits = PlacementLimits(downWords = quota),
                 )
             }
             return BoardGenerator(
-                columns,
-                rows,
-                maxRows,
-                directions = checkNotNull(directions),
-                filler = filler,
-                downWords = quota,
+                BoardSize(columns, rows, maxRows),
+                rules = listOf(WordRule.straight(checkNotNull(directions))),
+                filler = Filler(filler),
+                limits = PlacementLimits(downWords = quota),
             )
         }
 
@@ -60,7 +56,11 @@ class PlacementCheckTests {
             if (leadingRules != null) {
                 generator.checkPlacement(words, leadingRules.map { it.value })
             } else {
-                generator.checkPlacement(words, firstDirection, firstRule?.value)
+                generator.checkPlacement(
+                    words,
+                    firstRule =
+                        firstRule?.value ?: firstDirection?.let { WordRule.straight(listOf(it)) },
+                )
             }
         }
 
@@ -68,7 +68,11 @@ class PlacementCheckTests {
             if (leadingRules != null) {
                 generator.request(words, leadingRules.map { it.value })
             } else {
-                generator.request(words, firstDirection, firstRule?.value)
+                generator.request(
+                    words,
+                    firstRule =
+                        firstRule?.value ?: firstDirection?.let { WordRule.straight(listOf(it)) },
+                )
             }
 
         fun failure(outcome: String): BoardGenerator.Failure =

@@ -44,6 +44,8 @@ data class WordRule(
             }
 
     companion object {
+        fun straight(directions: List<Direction>): WordRule = WordRule(directions)
+
         fun minimumTurns(
             toFit: Int,
             startDirections: List<Direction>,

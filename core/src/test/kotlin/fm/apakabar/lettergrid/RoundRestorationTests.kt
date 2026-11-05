@@ -13,13 +13,13 @@ class RoundRestorationTests {
             listOf("CAT".cells, "DOG".cells),
             listOf(Placement("CAT", Cell(0, 0), Direction.RIGHT), Placement("DOG", Cell(1, 0), Direction.RIGHT)),
         )
-    private val right = listOf(Direction.RIGHT)
+    private val right = listOf(WordRule.straight(listOf(Direction.RIGHT)))
 
     @ParameterizedTest
     @ValueSource(ints = [-1, 3, Int.MAX_VALUE])
     fun invalidRevealCountsAreReportedAtRestoration(count: Int) {
         val progress = RoundProgress(revealed = mapOf("CAT" to count))
-        val failure = assertFailsWith<RoundProgress.Failure> { Round.restoring(progress, board, directions = right) }
+        val failure = assertFailsWith<RoundProgress.Failure> { Round.restoring(progress, board, rules = right) }
         assertEquals(RoundProgress.Failure.InvalidRevealCount("CAT", count), failure)
         assertEquals(count, progress.revealed["CAT"])
     }
@@ -47,7 +47,7 @@ class RoundRestorationTests {
                 Round.restoring(
                     RoundProgress(secondsLeft = -1),
                     board,
-                    directions = right,
+                    rules = right,
                 )
             }
         assertEquals(RoundProgress.Failure.NegativeSeconds(-1), failure)
@@ -60,7 +60,7 @@ class RoundRestorationTests {
                 Round.restoring(
                     RoundProgress(),
                     board,
-                    directions = listOf(Direction.DOWN),
+                    rules = listOf(WordRule.straight(listOf(Direction.DOWN))),
                 )
             }
         assertEquals(Round.Failure.UnselectableWord("CAT"), failure)
@@ -75,7 +75,13 @@ class RoundRestorationTests {
     @Test
     fun validProgressRoundTripsWithoutReplayingAnIntroduction() {
         val progress = RoundProgress(found = listOf("CAT"), revealed = mapOf("DOG" to 1), secondsLeft = 7)
-        val round = Round.restoring(progress, board, directions = right, seconds = 20, introduces = true)
+        val round =
+            Round.restoring(
+                progress,
+                board,
+                rules = right,
+                options = RoundOptions(seconds = 20, introduces = true),
+            )
         assertEquals(progress, round.progress)
         assertEquals(Round.Phase.PLAYING, round.phase)
         assertEquals(listOf("D", null, null), round.shownLetters(board.placements[1]))
@@ -87,9 +93,8 @@ class RoundRestorationTests {
             Round.restoring(
                 RoundProgress(secondsLeft = 0),
                 board,
-                directions = right,
-                seconds = 20,
-                introduces = true,
+                rules = right,
+                options = RoundOptions(seconds = 20, introduces = true),
             )
         round.touch(Cell(0, 0))
         round.drag(Cell(0, 2))
@@ -100,7 +105,7 @@ class RoundRestorationTests {
     @Test
     fun externallyOwnedClockDoesNotStartARoundCountdown() {
         val progress = RoundProgress(found = listOf("CAT"), secondsLeft = 0)
-        val round = Round.restoring(progress, board, directions = right)
+        val round = Round.restoring(progress, board, rules = right)
         assertEquals(Round.Phase.PLAYING, round.phase)
         assertNull(round.secondsLeft)
     }

@@ -15,20 +15,17 @@ class SameNeighbourTests {
         val directions = listOf(Direction.RIGHT, Direction.DOWN)
         val plain =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                directions = directions,
-                filler = LetterWeights(weights),
-                downWords =
-                    1..2,
+                size = BoardSize(7, 7),
+                rules = listOf(WordRule.straight(directions)),
+                filler = Filler(LetterWeights(weights)),
+                limits = PlacementLimits(downWords = 1..2),
             )
         val explicit =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                directions = directions,
-                filler = LetterWeights(weights, sameNeighbour = 1.0),
-                downWords = 1..2,
+                size = BoardSize(7, 7),
+                rules = listOf(WordRule.straight(directions)),
+                filler = Filler(LetterWeights(weights, sameNeighbour = 1.0)),
+                limits = PlacementLimits(downWords = 1..2),
             )
         assertEquals(plain.request(words).board(3uL), explicit.request(words).board(3uL))
     }

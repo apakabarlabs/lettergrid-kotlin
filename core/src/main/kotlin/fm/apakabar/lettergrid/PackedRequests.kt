@@ -31,7 +31,7 @@ private class WordAcceptance(
             upper.toSet().size == upper.size &&
             upper.all { it.isNotEmpty() } &&
             upper.none { word -> upper.any { it != word && it.containsCells(word) } } &&
-            generator.filler.letters(excluding = excluded) != null
+            generator.weights.letters(excluding = excluded) != null
     }
 
     private fun fittingRules(): List<List<WordRule>> =
@@ -58,21 +58,19 @@ private class WordAcceptance(
 
 internal fun BoardGenerator.packedRequest(
     words: List<String>,
-    firstDirection: Direction?,
     leadingRules: List<WordRule>,
     maxRows: Int,
 ): BoardRequest {
     if (!accepts(words, leadingRules)) throw BoardGenerator.Failure.NoRoom(words, columns, rows)
     return if (this.maxRows == null) {
-        growingRequest(words, firstDirection, leadingRules, maxRows)
+        growingRequest(words, leadingRules, maxRows)
     } else {
-        boundedRequest(words, firstDirection, leadingRules, maxRows)
+        boundedRequest(words, leadingRules, maxRows)
     }
 }
 
 private fun BoardGenerator.boundedRequest(
     words: List<String>,
-    firstDirection: Direction?,
     leadingRules: List<WordRule>,
     maxRows: Int,
 ): BoardRequest {
@@ -85,7 +83,7 @@ private fun BoardGenerator.boundedRequest(
                 PathPacking.Outcome.Undetermined -> null.also { unsettled = true }
             }
         }
-    return layout?.let { BoardRequest(words, firstDirection, this, leadingRules, it) }
+    return layout?.let { BoardRequest(words, this, leadingRules, it) }
         ?: throw if (unsettled) {
             BoardGenerator.Failure.Unsettled(words, columns, maxRows)
         } else {
@@ -95,7 +93,6 @@ private fun BoardGenerator.boundedRequest(
 
 private fun BoardGenerator.growingRequest(
     words: List<String>,
-    firstDirection: Direction?,
     leadingRules: List<WordRule>,
     tallest: Int,
 ): BoardRequest {
@@ -103,7 +100,7 @@ private fun BoardGenerator.growingRequest(
 
     fun placed(height: Int) = (outcome(height) as? PathPacking.Outcome.Placed)?.placements
 
-    placed(rows)?.let { return BoardRequest(words, firstDirection, this, leadingRules, Layout(rows, it)) }
+    placed(rows)?.let { return BoardRequest(words, this, leadingRules, Layout(rows, it)) }
     var found: Layout =
         when (val outcome = outcome(tallest)) {
             is PathPacking.Outcome.Placed -> Layout(tallest, outcome.placements)
@@ -116,7 +113,7 @@ private fun BoardGenerator.growingRequest(
         val placements = placed(middle)
         if (placements != null) found = Layout(middle, placements) else lowest = middle + 1
     }
-    return BoardRequest(words, firstDirection, this, leadingRules, found)
+    return BoardRequest(words, this, leadingRules, found)
 }
 
 internal fun BoardGenerator.packedLayout(

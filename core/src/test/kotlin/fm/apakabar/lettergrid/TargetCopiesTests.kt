@@ -26,11 +26,14 @@ class TargetCopiesTests {
         for (item in Fixtures.decode("target-copies", ListSerializer(Case.serializer()))) {
             val generator =
                 BoardGenerator(
-                    columns = item.columns,
-                    rows = item.rows,
-                    maxRows = if (item.bounded) item.rows else null,
+                    size =
+                        BoardSize(
+                            columns = item.columns,
+                            rows = item.rows,
+                            maxRows = if (item.bounded) item.rows else null,
+                        ),
                     rules = (item.turns ?: listOf(0)).map { WordRule(listOf(Direction.RIGHT, Direction.DOWN), it) },
-                    filler = LetterWeights(item.filler ?: mapOf("X" to 1.0, "Q" to 1.0)),
+                    filler = Filler(LetterWeights(item.filler ?: mapOf("X" to 1.0, "Q" to 1.0))),
                 )
             if (item.rejects == true) {
                 val failure = assertFailsWith<BoardGenerator.Failure>(item.name) { generator.request(item.words) }

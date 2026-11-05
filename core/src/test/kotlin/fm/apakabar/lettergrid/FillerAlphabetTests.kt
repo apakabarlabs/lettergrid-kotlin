@@ -25,12 +25,10 @@ class FillerAlphabetTests {
         for (item in Fixtures.decode("filler-alphabet", ListSerializer(Case.serializer()))) {
             val generator =
                 BoardGenerator(
-                    columns = item.columns,
-                    rows = item.rows,
-                    maxRows = item.rows,
-                    directions = item.directions,
-                    filler = LetterWeights(item.weights),
-                    downWords = item.vertical[0]..item.vertical[1],
+                    size = BoardSize(columns = item.columns, rows = item.rows, maxRows = item.rows),
+                    rules = listOf(WordRule.straight(item.directions)),
+                    filler = Filler(LetterWeights(item.weights)),
+                    limits = PlacementLimits(downWords = item.vertical[0]..item.vertical[1]),
                 )
             assertTrue(generator.accepts(item.words), item.name)
             val request = generator.request(item.words)

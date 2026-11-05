@@ -12,13 +12,9 @@ class BoardRequestTests {
     fun anEmptyTargetListCannotBecomeAPlayableRequest() {
         val generator =
             BoardGenerator(
-                columns = 5,
-                rows = 5,
-                directions = listOf(Direction.RIGHT),
-                filler =
-                    LetterWeights(
-                        mapOf("x" to 1.0),
-                    ),
+                size = BoardSize(5, 5),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT))),
+                filler = Filler(LetterWeights(mapOf("x" to 1.0))),
             )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(emptyList()) }
         assertEquals(BoardGenerator.Failure.NoRoom(emptyList(), 5, 5), failure)
@@ -28,11 +24,10 @@ class BoardRequestTests {
     fun aPreparedRequestRetainsItsGenerationSettings() {
         val request =
             BoardGenerator(
-                columns = 3,
-                rows = 4,
-                directions = listOf(Direction.DOWN),
-                filler = LetterWeights(mapOf("x" to 1.0, "y" to 1.0, "z" to 1.0, "q" to 1.0)),
-                downWords = 2..2,
+                size = BoardSize(3, 4),
+                rules = listOf(WordRule.straight(listOf(Direction.DOWN))),
+                filler = Filler(LetterWeights(mapOf("x" to 1.0, "y" to 1.0, "z" to 1.0, "q" to 1.0))),
+                limits = PlacementLimits(downWords = 2..2),
             ).request(listOf("CAT", "DOG"))
         val board = request.board(42uL)
         assertEquals(3, board.columns)
@@ -48,8 +43,16 @@ class BoardRequestTests {
         val filler = LetterWeights(mapOf("x" to 1.0))
         val generators =
             listOf(
-                BoardGenerator(columns = dimension, rows = 5, directions = listOf(Direction.DOWN), filler = filler),
-                BoardGenerator(columns = 5, rows = dimension, directions = listOf(Direction.RIGHT), filler = filler),
+                BoardGenerator(
+                    BoardSize(dimension, 5),
+                    listOf(WordRule.straight(listOf(Direction.DOWN))),
+                    Filler(filler),
+                ),
+                BoardGenerator(
+                    BoardSize(5, dimension),
+                    listOf(WordRule.straight(listOf(Direction.RIGHT))),
+                    Filler(filler),
+                ),
             )
         for (generator in generators) {
             val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("CAT")) }
@@ -62,14 +65,12 @@ class BoardRequestTests {
         val filler = LetterWeights(mapOf("x" to 1.0))
         val generators =
             listOf(
-                BoardGenerator(columns = 5, rows = 5, directions = emptyList(), filler = filler),
+                BoardGenerator(BoardSize(5, 5), listOf(WordRule.straight(emptyList())), Filler(filler)),
                 BoardGenerator(
-                    columns = 5,
-                    rows = 5,
-                    directions = listOf(Direction.RIGHT),
-                    filler = filler,
-                    downWords =
-                        -1..1,
+                    size = BoardSize(5, 5),
+                    rules = listOf(WordRule.straight(listOf(Direction.RIGHT))),
+                    filler = Filler(filler),
+                    limits = PlacementLimits(downWords = -1..1),
                 ),
             )
         for (generator in generators) {

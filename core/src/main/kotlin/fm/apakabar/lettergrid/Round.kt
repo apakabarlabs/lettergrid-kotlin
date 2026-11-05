@@ -29,27 +29,25 @@ enum class HintOrder {
         }
 }
 
-class Round private constructor(
+class Round(
     val board: Board,
-    private val directions: List<Direction>,
-    seconds: Int?,
-    introduces: Boolean,
-    val hintOrder: HintOrder,
-    progress: RoundProgress,
-    private val pathRules: List<WordRule>,
+    private val rules: List<WordRule>,
+    options: RoundOptions = RoundOptions(),
+    progress: RoundProgress = RoundProgress(),
 ) {
     sealed class Failure(
         message: String,
     ) : Exception(message) {
         data class UnselectableWord(
             val word: String,
-        ) : Failure("The enabled directions cannot select the word $word.")
+        ) : Failure("The enabled rules cannot select the word $word.")
     }
 
     enum class Phase { INTRODUCING, PLAYING, WON, LOST }
 
     val id: UUID = UUID.randomUUID()
     val showsFirstWord: Boolean
+    val hintOrder: HintOrder = options.hintOrder
 
     private val revision = MutableStateFlow(0L)
 
@@ -58,12 +56,12 @@ class Round private constructor(
     var phase: Phase = Phase.PLAYING
         private set(value) {
             field = value
-            changed()
+            revision.changed()
         }
     var secondsLeft: Int? = null
         private set(value) {
             field = value
-            changed()
+            revision.changed()
         }
     private val foundPlacements: MutableSet<Placement>
     val found: Set<Placement> get() = foundPlacements.toSet()
@@ -72,24 +70,26 @@ class Round private constructor(
     var introduced: List<Cell> = emptyList()
         private set(value) {
             field = value
-            changed()
+            revision.changed()
         }
     var selection: List<Cell> = emptyList()
         private set(value) {
             field = value
-            changed()
+            revision.changed()
         }
     var rejected: List<Cell> = emptyList()
         private set(value) {
             field = value
-            changed()
+            revision.changed()
         }
 
     init {
+        val seconds = options.seconds
+        val introduces = options.introduces
         require(seconds == null || seconds >= 0) { "Round seconds must be nonnegative" }
         try {
             progress.validate(board)
-            if (pathRules.isEmpty()) validateDirections(directions, board) else validateRules(pathRules, board)
+            validateRules(rules, board)
         } catch (failure: RoundProgress.Failure) {
             throw invalidProgress(failure)
         } catch (failure: Failure) {
@@ -110,15 +110,6 @@ class Round private constructor(
             phase = Phase.LOST
         }
     }
-
-    constructor(
-        board: Board,
-        directions: List<Direction>,
-        seconds: Int? = null,
-        introduces: Boolean = false,
-        hintOrder: HintOrder = HintOrder.FROM_START,
-        progress: RoundProgress = RoundProgress(),
-    ) : this(board, directions, seconds, introduces, hintOrder, progress, emptyList())
 
     val isOver: Boolean get() = phase == Phase.WON || phase == Phase.LOST
 
@@ -180,14 +171,8 @@ class Round private constructor(
     }
 
     fun drag(to: Cell) {
-        val start = selection.firstOrNull()
-        if (phase != Phase.PLAYING || start == null) return
-        selection =
-            if (pathRules.isEmpty()) {
-                board.selection(start, to, directions)
-            } else {
-                board.selection(extending = selection, toward = to, rules = pathRules)
-            }
+        if (phase != Phase.PLAYING || selection.isEmpty()) return
+        selection = board.selection(extending = selection, toward = to, rules = rules)
     }
 
     fun release(): Placement? {
@@ -203,7 +188,7 @@ class Round private constructor(
         val target = hintTarget
         if (phase != Phase.PLAYING || target == null) return null
         revealedCounts[target] = (revealedCounts[target] ?: 0) + 1
-        changed()
+        revision.changed()
         return target
     }
 
@@ -211,59 +196,28 @@ class Round private constructor(
         rejected = emptyList()
     }
 
-    private fun hintLimit(placement: Placement): Int = placement.word.cellCount - 1
-
     private fun revealedIndices(placement: Placement): List<Int> =
         hintOrder.letterIndices(placement.word).take(revealedCounts[placement] ?: 0)
 
     private fun record(placement: Placement): Placement {
         foundPlacements += placement
-        changed()
+        revision.changed()
         if (foundPlacements.size == board.placements.size) phase = Phase.WON
         return placement
     }
 
-    private fun changed() {
-        revision.value += 1
-    }
-
     companion object {
-        operator fun invoke(
-            board: Board,
-            rules: List<WordRule>,
-            seconds: Int? = null,
-            introduces: Boolean = false,
-            hintOrder: HintOrder = HintOrder.FROM_START,
-            progress: RoundProgress = RoundProgress(),
-        ): Round = Round(board, Direction.entries, seconds, introduces, hintOrder, progress, rules)
-
         fun restoring(
             progress: RoundProgress,
             board: Board,
             rules: List<WordRule>,
-            seconds: Int? = null,
-            introduces: Boolean = false,
-            hintOrder: HintOrder = HintOrder.FROM_START,
+            options: RoundOptions = RoundOptions(),
         ): Round {
+            val seconds = options.seconds
             if (seconds != null && seconds < 0) throw RoundProgress.Failure.NegativeSeconds(seconds)
             progress.validate(board)
             validateRules(rules, board)
-            return Round(board, rules, seconds, introduces, hintOrder, progress)
-        }
-
-        @JvmName("restoringDirections")
-        fun restoring(
-            progress: RoundProgress,
-            board: Board,
-            directions: List<Direction>,
-            seconds: Int? = null,
-            introduces: Boolean = false,
-            hintOrder: HintOrder = HintOrder.FROM_START,
-        ): Round {
-            if (seconds != null && seconds < 0) throw RoundProgress.Failure.NegativeSeconds(seconds)
-            progress.validate(board)
-            validateDirections(directions, board)
-            return Round(board, directions, seconds, introduces, hintOrder, progress)
+            return Round(board, rules, options, progress)
         }
 
         private fun invalidProgress(failure: Exception) =
@@ -284,22 +238,11 @@ class Round private constructor(
                 if (!selectable) throw Failure.UnselectableWord(placement.word)
             }
         }
-
-        private fun validateDirections(
-            directions: List<Direction>,
-            board: Board,
-        ) {
-            for (placement in board.placements) {
-                val oneCell = placement.cells.size == 1 && directions.isNotEmpty()
-                val selectable =
-                    oneCell ||
-                        placement.turns == 0 &&
-                        (
-                            placement.direction in directions ||
-                                (placement.isPalindrome && placement.direction.opposite in directions)
-                        )
-                if (!selectable) throw Failure.UnselectableWord(placement.word)
-            }
-        }
     }
+}
+
+private fun hintLimit(placement: Placement): Int = placement.word.cellCount - 1
+
+private fun MutableStateFlow<Long>.changed() {
+    value += 1
 }

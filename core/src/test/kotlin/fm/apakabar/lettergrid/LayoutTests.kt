@@ -8,11 +8,10 @@ class LayoutTests {
     private val directions = listOf(Direction.RIGHT, Direction.DOWN)
     private val generator =
         BoardGenerator(
-            columns = 5,
-            rows = 5,
-            directions = directions,
-            filler = LetterWeights(mapOf("x" to 1.0, "y" to 1.0, "z" to 1.0)),
-            downWords = 1..1,
+            size = BoardSize(columns = 5, rows = 5),
+            rules = listOf(WordRule.straight(directions)),
+            filler = Filler(LetterWeights(mapOf("x" to 1.0, "y" to 1.0, "z" to 1.0))),
+            limits = PlacementLimits(downWords = 1..1),
         )
 
     @Test

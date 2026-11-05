@@ -1,9 +1,5 @@
 package fm.apakabar.lettergrid
 
-internal object NoiseSearch {
-    val maximumVisits: Int get() = Generation.settings.noise.visitLimit
-}
-
 internal fun Board.strayWordCount(
     dictionary: WordIndex,
     rules: List<WordRule>,

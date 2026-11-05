@@ -30,12 +30,10 @@ class BandedBoardTests {
     ): BoardGenerator {
         val weights = alphabet.associateWith { 1.0 } + ("z" to 0.5)
         return BoardGenerator(
-            columns = 7,
-            rows = 7,
-            maxRows = maxRows,
-            directions = directions,
-            filler = LetterWeights(weights),
-            downWords = downWords,
+            size = BoardSize(7, 7, maxRows),
+            rules = listOf(WordRule.straight(directions)),
+            filler = Filler(LetterWeights(weights)),
+            limits = PlacementLimits(downWords = downWords),
         )
     }
 
@@ -58,7 +56,7 @@ class BandedBoardTests {
                     val first = if (random.nextBoolean()) null else random.pick(directions)
                     val request =
                         try {
-                            generator.request(words, firstDirection = first)
+                            generator.request(words, firstRule = first?.let { WordRule.straight(listOf(it)) })
                         } catch (_: BoardGenerator.Failure) {
                             return@repeat
                         }
@@ -101,7 +99,7 @@ class BandedBoardTests {
                     val first = random.pick(directions)
                     val request =
                         try {
-                            generator.request(words, firstDirection = first)
+                            generator.request(words, firstRule = first?.let { WordRule.straight(listOf(it)) })
                         } catch (_: BoardGenerator.Failure.NoRoom) {
                             return@repeat
                         }
@@ -126,7 +124,7 @@ class BandedBoardTests {
             generator(
                 directions,
                 2..2,
-            ).request(listOf("ABCDEF", "BADCFE", "CAFEBD"), firstDirection = Direction.DOWN_RIGHT)
+            ).request(listOf("ABCDEF", "BADCFE", "CAFEBD"), firstRule = WordRule.straight(listOf(Direction.DOWN_RIGHT)))
         val board = request.board(7uL)
         assertTrue(board.rows <= 13)
         assertEquals(2, board.placements.count { it.direction == Direction.DOWN })
@@ -143,10 +141,9 @@ class BandedBoardTests {
     fun wordsThatUseEveryFillerLetterAreRejected() {
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                directions = listOf(Direction.RIGHT, Direction.DOWN),
-                filler = LetterWeights(mapOf("a" to 1.0, "b" to 1.0)),
+                size = BoardSize(7, 7),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN))),
+                filler = Filler(LetterWeights(mapOf("a" to 1.0, "b" to 1.0))),
             )
         assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("AB", "BBA")) }
     }

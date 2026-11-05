@@ -22,10 +22,9 @@ class CellCaseTests {
     fun aWordWithALongerCapitalTakesOneCellPerLetter() {
         val generator =
             BoardGenerator(
-                columns = 6,
-                rows = 6,
-                directions = listOf(Direction.RIGHT, Direction.DOWN),
-                filler = LetterWeights(mapOf("ա" to 1.0, "ն" to 1.0, "ս" to 1.0, "տ" to 1.0, "կ" to 1.0)),
+                size = BoardSize(columns = 6, rows = 6),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN))),
+                filler = Filler(LetterWeights(mapOf("ա" to 1.0, "ն" to 1.0, "ս" to 1.0, "տ" to 1.0, "կ" to 1.0))),
             )
         val request = generator.request(listOf("երևան", "ևս"))
         val board = request.board(7uL)

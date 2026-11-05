@@ -57,12 +57,10 @@ class DirectionLimitTests {
         for (maximumRows in listOf(7, null)) {
             val generator =
                 BoardGenerator(
-                    columns = 7,
-                    rows = 7,
-                    maxRows = maximumRows,
+                    size = BoardSize(7, 7, maximumRows),
                     rules = rules,
-                    filler = filler,
-                    maxWordsPerDirection = 2,
+                    filler = Filler(filler),
+                    limits = PlacementLimits(maxWordsPerDirection = 2),
                 )
             generator.checkPlacement(words, leadingRules = leading)
             val request = generator.placementRequest(words, leading)
@@ -79,18 +77,16 @@ class DirectionLimitTests {
     fun straightInitializerEnforcesTheSameLimit() {
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                maxRows = 7,
-                directions = listOf(Direction.RIGHT, Direction.DOWN),
-                filler = filler,
-                maxWordsPerDirection = 1,
+                size = BoardSize(7, 7, 7),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN))),
+                filler = Filler(filler),
+                limits = PlacementLimits(maxWordsPerDirection = 1),
             )
         val words = listOf("CAT", "DOG", "SUN")
         assertFalse(generator.accepts(words))
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.checkPlacement(words) }
         assertEquals(BoardGenerator.Failure.NoRoom(words, 7, 7), failure)
-        val request = generator.request(listOf("CAT", "DOG"), firstDirection = Direction.RIGHT)
+        val request = generator.request(listOf("CAT", "DOG"), firstRule = WordRule.straight(listOf(Direction.RIGHT)))
         for (seed in 0uL..2uL) {
             val directions = request.board(seed).placements.map { it.direction }
             assertEquals(setOf(Direction.RIGHT, Direction.DOWN), directions.toSet())
@@ -100,11 +96,21 @@ class DirectionLimitTests {
     @Test
     fun aLimitChangesRequestIdentityWithoutChangingUnlimitedDefaults() {
         val directions = listOf(Direction.RIGHT, Direction.DOWN)
-        val unlimited = BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler)
+        val unlimited = BoardGenerator(BoardSize(7, 7), listOf(WordRule.straight(directions)), Filler(filler))
         val explicitNil =
-            BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler, maxWordsPerDirection = null)
+            BoardGenerator(
+                BoardSize(7, 7),
+                listOf(WordRule.straight(directions)),
+                Filler(filler),
+                PlacementLimits(maxWordsPerDirection = null),
+            )
         val limited =
-            BoardGenerator(columns = 7, rows = 7, directions = directions, filler = filler, maxWordsPerDirection = 2)
+            BoardGenerator(
+                BoardSize(7, 7),
+                listOf(WordRule.straight(directions)),
+                Filler(filler),
+                PlacementLimits(maxWordsPerDirection = 2),
+            )
         assertEquals(unlimited, explicitNil)
         assertNotEquals(unlimited, limited)
         val words = listOf("CAT", "DOG", "SUN")

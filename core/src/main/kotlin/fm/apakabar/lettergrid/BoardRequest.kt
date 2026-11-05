@@ -2,7 +2,6 @@ package fm.apakabar.lettergrid
 
 class BoardRequest internal constructor(
     val words: List<String>,
-    val firstDirection: Direction?,
     private val generator: BoardGenerator,
     val leadingRules: List<WordRule>,
     internal val layout: Layout,
@@ -34,7 +33,6 @@ class BoardRequest internal constructor(
     ): BoardRequest =
         BoardRequest(
             words,
-            firstDirection,
             generator,
             leadingRules,
             layout,
@@ -44,11 +42,10 @@ class BoardRequest internal constructor(
     override fun equals(other: Any?): Boolean =
         other is BoardRequest &&
             other.words == words &&
-            other.firstDirection == firstDirection &&
             other.generator == generator &&
             other.leadingRules == leadingRules &&
             other.layout == layout &&
             other.runFree == runFree
 
-    override fun hashCode(): Int = listOf(words, firstDirection, generator, leadingRules, layout, runFree).hashCode()
+    override fun hashCode(): Int = listOf(words, generator, leadingRules, layout, runFree).hashCode()
 }

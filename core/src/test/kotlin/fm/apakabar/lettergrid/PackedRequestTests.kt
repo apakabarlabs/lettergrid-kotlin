@@ -35,6 +35,9 @@ class PackedRequestTests {
         val directionCap: Int?
             get() = if (largestDirectionCap == true) Int.MAX_VALUE else maxWordsPerDirection
 
+        val verticalQuota: IntRange
+            get() = downWords?.let { it[0]..it[1] } ?: if (words.size == 1) 0..1 else 1..2
+
         val leading: List<WordRule>
             get() = leadingRules?.map { it.wordRule } ?: listOfNotNull(firstRule?.wordRule)
 
@@ -55,13 +58,14 @@ class PackedRequestTests {
             val rules = item.rules.map { it.wordRule }
             val generator =
                 BoardGenerator(
-                    columns = 7,
-                    rows = 7,
-                    maxRows = if (item.grows == true) null else 7,
+                    size = BoardSize(7, 7, if (item.grows == true) null else 7),
                     rules = rules,
-                    filler = LetterWeights(mapOf("q" to 1.0, "w" to 1.0)),
-                    downWords = item.downWords?.let { it[0]..it[1] } ?: if (item.words.size == 1) 0..1 else 1..2,
-                    maxWordsPerDirection = item.directionCap,
+                    filler = Filler(LetterWeights(mapOf("q" to 1.0, "w" to 1.0))),
+                    limits =
+                        PlacementLimits(
+                            downWords = item.verticalQuota,
+                            maxWordsPerDirection = item.directionCap,
+                        ),
                 )
             assertEquals(item.accepted ?: true, generator.accepts(item.words, leadingRules = item.leading), item.name)
             if (!item.fits) {
@@ -85,7 +89,7 @@ class PackedRequestTests {
                 layouts += board.placements
                 assertEquals(item.words, board.placements.map { it.word }, item.name)
                 checkDirectionLimit(board, item)
-                assertTrue(board.placements.count { it.direction.isVertical } in generator.downWords, item.name)
+                assertTrue(board.placements.count { it.direction.isVertical } in generator.limits.downWords, item.name)
                 for (placement in board.placements) {
                     assertTrue(rules.any { it.matches(placement) }, "${item.name}: ${placement.word}")
                     assertEquals(1, board.occurrences(placement.word, rules = rules), "${item.name}: ${placement.word}")

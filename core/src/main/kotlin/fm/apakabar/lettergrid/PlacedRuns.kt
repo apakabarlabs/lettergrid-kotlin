@@ -4,6 +4,8 @@ internal class PlacedRuns(
     val columns: Int,
     val rows: Int,
 ) {
+    private val length: Int get() = Generation.settings.fill.runLength
+
     fun formed(
         placement: Placement,
         letters: List<String?>,
@@ -11,8 +13,8 @@ internal class PlacedRuns(
     ): Boolean =
         placement.cells.any { cell ->
             Direction.lineAxes.any { axis ->
-                (0 until 3).any { offset ->
-                    val run = (0 until 3).map { cell.moved(axis, it - offset) }
+                (0 until length).any { offset ->
+                    val run = (0 until length).map { cell.moved(axis, it - offset) }
                     val letter = if (run.all(::isOnBoard)) letters[slot(run[0])] else null
                     if (letter == null || !run.all { letters[slot(it)] == letter }) {
                         false

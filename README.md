@@ -10,13 +10,14 @@ same seed gives the same board.
 ```kotlin
 import fm.apakabar.lettergrid.*
 
+val rules = listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.DOWN)))
 val generator =
     BoardGenerator(
-        columns = 7, rows = 7, directions = listOf(Direction.RIGHT, Direction.DOWN),
-        filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0)),
+        size = BoardSize(columns = 7, rows = 7), rules = rules,
+        filler = Filler(LetterWeights(mapOf("x" to 1.0, "q" to 1.0, "z" to 1.0))),
     )
 val board = generator.board(listOf("cat", "dog", "sun"), seed = 42uL)
-val round = Round(board, directions = listOf(Direction.RIGHT, Direction.DOWN))
+val round = Round(board, rules = rules)
 ```
 
 | The library | The app |
@@ -35,8 +36,10 @@ val style =
     )
 LetterBoard(
     round, style,
-    onTouch = round::touch, onDrag = round::drag,
-    onRelease = { round.release() }, onRejectionShown = round::clearRejection,
+    actions = LetterBoardActions(
+        onTouch = round::touch, onDrag = round::drag,
+        onRelease = { round.release() }, onRejectionShown = round::clearRejection,
+    ),
 )
 ```
 
@@ -50,8 +53,8 @@ repositories {
 }
 
 dependencies {
-    implementation("fm.apakabar:lettergrid-kotlin:0.23.0")
-    implementation("fm.apakabar:lettergrid-kotlin-ui:0.23.0") // only for Compose
+    implementation("fm.apakabar:lettergrid-kotlin:0.26.0")
+    implementation("fm.apakabar:lettergrid-kotlin-ui:0.26.0") // only for Compose
 }
 ```
 
@@ -67,8 +70,8 @@ val straight = WordRule(Direction.entries)
 val bent = WordRule(listOf(Direction.RIGHT), turns = 2)
 val generator =
     BoardGenerator(
-        columns = 7, rows = 7, rules = listOf(straight, bent),
-        filler = LetterWeights(mapOf("x" to 1.0, "q" to 1.0)),
+        size = BoardSize(columns = 7, rows = 7), rules = listOf(straight, bent),
+        filler = Filler(LetterWeights(mapOf("x" to 1.0, "q" to 1.0))),
     )
 val request = generator.request(listOf("planet", "star"), firstRule = bent)
 val round = Round(request.board(seed = 42uL), rules = listOf(straight, bent))
@@ -89,15 +92,23 @@ val request =
 - `accepts(words, leadingRules)` runs the preliminary word and quota checks. Accepted words may
   still fail the placement or fill search in `request`.
 - `checkPlacement(words)` searches for target paths without filling the remaining cells, and
-  takes the same `firstDirection`, `firstRule` or `leadingRules` as `request`. Success does not
+  takes the same `firstRule` or `leadingRules` as `request`. Success does not
   guarantee that filler can complete the board: call `request` for the chosen words and handle
   its failure before showing a board.
-- `maxWordsPerDirection = 2` on either generator limits how many targets start in each
+- `limits = PlacementLimits(maxWordsPerDirection = 2)` limits how many targets start in each
   direction. A turned word counts by its first segment, and opposite directions count
   separately. A limit must be positive, or the checks fail with `InvalidConfiguration`; too
   little room fails with `NoRoom`.
 
 Every failure of the generator is a `BoardGenerator.Failure`.
+
+`BoardSize.maxRows` defaults to `null`, so boards may grow downwards. `Filler` holds the
+letter weights and optional `conditionalCharacters`. `PlacementLimits` also accepts
+`downWords`, which counts targets starting up or down; both limits default to no limit.
+`RoundOptions(seconds = 60, introduces = true, hintOrder = HintOrder.ANY_BUT_FIRST)` groups
+round settings; by default there is no clock, no introduction, and hints start at the first
+letter. For straight rules, a drag snaps to the nearest allowed direction, ties follow the
+order of the rules' start directions, and dragging past the board stops at its last cell.
 
 ## Saving a game
 
@@ -108,7 +119,7 @@ which throw instead of stopping the app:
 ```kotlin
 val placements = saved.map { Placement.validating(it.word, it.cells) }
 val board = Board.validating(letters, placements)
-val round = Round.restoring(savedProgress, board, directions = listOf(Direction.RIGHT, Direction.DOWN), seconds = 60)
+val round = Round.restoring(savedProgress, board, rules = rules, options = RoundOptions(seconds = 60))
 ```
 
 ## Differences from Swift
@@ -117,7 +128,6 @@ val round = Round.restoring(savedProgress, board, directions = listOf(Direction.
 |---|---|
 | A cell holds a `Character` | A cell holds one grapheme as a `String`, split by `String.cells`, since a `Char` cannot hold one |
 | `Board(validating:placements:)`, `Placement(validating:cells:)`, `Round(restoring:...)` | `Board.validating`, `Placement.validating`, `Round.restoring` |
-| `BoardGenerator(…rules:)` and `Round(board:rules:)` initializers | The same calls with a named `rules =` argument; they resolve to companion functions, since a JVM constructor cannot overload on a list's element type |
 | `Round` is `@Observable` | `Round.changes` is a `StateFlow` that moves on every change, and the views collect it |
 | `Countdown.run` returns when cancelled | `Countdown.run` suspends, and cancellation ends it with `CancellationException` |
 | `SeededRandom.nextInt(below:)` takes a 64-bit `Int` | `nextInt(below)` takes an `Int` and `nextLong(below)` a `Long`, drawing the same stream |

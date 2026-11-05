@@ -31,12 +31,18 @@ class SeparatorBoardTests {
         val conditional = example.conditional.orEmpty().mapTo(mutableSetOf()) { it.cellUppercased }
         val generator =
             BoardGenerator(
-                columns = example.columns ?: 7,
-                rows = example.rows ?: 7,
-                maxRows = if (example.bounded) example.rows ?: 7 else null,
+                size =
+                    BoardSize(
+                        columns = example.columns ?: 7,
+                        rows = example.rows ?: 7,
+                        maxRows = if (example.bounded) example.rows ?: 7 else null,
+                    ),
                 rules = listOf(rule),
-                filler = LetterWeights(example.weights ?: mapOf("x" to 1.0, "q" to 1.0)),
-                conditionalCharacters = conditional,
+                filler =
+                    Filler(
+                        LetterWeights(example.weights ?: mapOf("x" to 1.0, "q" to 1.0)),
+                        conditionalCharacters = conditional,
+                    ),
             )
         if (example.rejects == true) {
             assertFailsWith<BoardGenerator.Failure> { generator.request(example.words) }

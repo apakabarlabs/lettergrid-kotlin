@@ -33,6 +33,7 @@ internal data class Generation(
 
     @Serializable
     data class Fill(
+        val runLength: Int,
         val seeds: Int,
         val stepsPerChoice: Int,
         val completedCandidates: Int,
@@ -57,6 +58,7 @@ internal data class Generation(
                 }.use { it.readBytes().decodeToString() }
             val settings = Yaml.default.decodeFromString(serializer(), text)
             check(settings.supportedTurns.size == 2) { "supportedTurns names a first and last" }
+            check(settings.fill.runLength >= 2) { "fill.runLength names a run of two or more" }
             settings
         }
     }

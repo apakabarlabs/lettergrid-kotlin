@@ -17,11 +17,9 @@ class BoundedHeightTests {
     fun aMaximumBelowTheMinimumIsRejected(maximum: Int) {
         val generator =
             BoardGenerator(
-                columns = 5,
-                rows = 5,
-                maxRows = maximum,
-                directions = listOf(Direction.RIGHT),
-                filler = filler(),
+                size = BoardSize(5, 5, maximum),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT))),
+                filler = Filler(filler()),
             )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("CAT")) }
         assertEquals(BoardGenerator.Failure.InvalidConfiguration, failure)
@@ -30,11 +28,11 @@ class BoundedHeightTests {
     @Test
     fun impossiblePackingFailsBeforeAPlayableRequestExists() {
         val generator =
-            BoardGenerator(columns = 3, rows = 1, maxRows = 1, directions = listOf(Direction.RIGHT), filler = filler())
+            BoardGenerator(BoardSize(3, 1, 1), listOf(WordRule.straight(listOf(Direction.RIGHT))), Filler(filler()))
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("CAT", "DOG")) }
         assertEquals(BoardGenerator.Failure.NoRoom(listOf("CAT", "DOG"), 3, 1), failure)
         val unrestricted =
-            BoardGenerator(columns = 3, rows = 1, directions = listOf(Direction.RIGHT), filler = filler())
+            BoardGenerator(BoardSize(3, 1), listOf(WordRule.straight(listOf(Direction.RIGHT))), Filler(filler()))
         assertTrue(unrestricted.request(listOf("CAT", "DOG")).board(1uL).rows > 1)
     }
 
@@ -42,12 +40,10 @@ class BoundedHeightTests {
     fun aHeightRangeCanFitAWordTallerThanItsMinimum() {
         val request =
             BoardGenerator(
-                columns = 3,
-                rows = 2,
-                maxRows = 5,
-                directions = listOf(Direction.DOWN),
-                filler = filler(),
-                downWords = 1..1,
+                size = BoardSize(3, 2, 5),
+                rules = listOf(WordRule.straight(listOf(Direction.DOWN))),
+                filler = Filler(filler()),
+                limits = PlacementLimits(downWords = 1..1),
             ).request(listOf("CAT"))
         for (seed in 0uL until 12uL) {
             val board = request.board(seed)
@@ -61,7 +57,7 @@ class BoundedHeightTests {
     fun anIntroductionTriesItsOtherAllowedDirectionWithinTheBounds() {
         val rule = WordRule(listOf(Direction.DOWN, Direction.RIGHT))
         val request =
-            BoardGenerator(columns = 6, rows = 2, maxRows = 2, rules = listOf(rule), filler = filler())
+            BoardGenerator(BoardSize(6, 2, 2), rules = listOf(rule), filler = Filler(filler()))
                 .request(listOf("ABCDEF"), firstRule = rule)
         val board = request.board(1uL)
         assertEquals(2, board.rows)
@@ -86,12 +82,10 @@ class BoundedHeightTests {
         val words = listOf("ՊԱՏ", "ԿԾԵԼ", "ԹԱՌՄԱ")
         val request =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                maxRows = 7,
+                size = BoardSize(7, 7, 7),
                 rules = rules,
-                filler = LetterWeights(listOf("ա", "ե", "ի", "ո", "ւ", "ք").associateWith { 1.0 }),
-                downWords = 1..2,
+                filler = Filler(LetterWeights(listOf("ա", "ե", "ի", "ո", "ւ", "ք").associateWith { 1.0 })),
+                limits = PlacementLimits(downWords = 1..2),
             ).request(words, firstRule = introduced)
         for (seed in 0uL until 16uL) {
             val board = request.board(seed)
@@ -108,7 +102,7 @@ class BoundedHeightTests {
     ) {
         val rule = WordRule(listOf(direction), turns)
         val request =
-            BoardGenerator(columns = 7, rows = 7, maxRows = 7, rules = listOf(rule), filler = filler())
+            BoardGenerator(BoardSize(7, 7, 7), rules = listOf(rule), filler = Filler(filler()))
                 .request(listOf("ABCDEF"), firstRule = rule)
         for (seed in 0uL until 4uL) {
             val board = request.board(seed)
@@ -126,8 +120,13 @@ class BoundedHeightTests {
         val available = rules + introduced
         val words = listOf("PLANET", "ORBIT", "SUN")
         val request =
-            BoardGenerator(columns = 7, rows = 7, maxRows = 7, rules = available, filler = filler(), downWords = 1..2)
-                .request(words, firstRule = introduced)
+            BoardGenerator(
+                BoardSize(7, 7, 7),
+                rules = available,
+                filler = Filler(filler()),
+                limits =
+                    PlacementLimits(1..2),
+            ).request(words, firstRule = introduced)
         for (seed in 0uL until 12uL) {
             val board = request.board(seed)
             check(board, words, available, 1..2)
@@ -149,10 +148,10 @@ class BoundedHeightTests {
     @Test
     fun theOptionalMaximumIsPartOfRequestIdentity() {
         val straight = listOf(Direction.RIGHT, Direction.DOWN)
-        val unrestricted = BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler())
+        val unrestricted = BoardGenerator(BoardSize(7, 7), listOf(WordRule.straight(straight)), Filler(filler()))
         val explicitNil =
-            BoardGenerator(columns = 7, rows = 7, maxRows = null, directions = straight, filler = filler())
-        val bounded = BoardGenerator(columns = 7, rows = 7, maxRows = 7, directions = straight, filler = filler())
+            BoardGenerator(BoardSize(7, 7, null), listOf(WordRule.straight(straight)), Filler(filler()))
+        val bounded = BoardGenerator(BoardSize(7, 7, 7), listOf(WordRule.straight(straight)), Filler(filler()))
         assertEquals(unrestricted, explicitNil)
         assertNotEquals(unrestricted, bounded)
         assertEquals(

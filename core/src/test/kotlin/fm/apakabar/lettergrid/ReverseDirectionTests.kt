@@ -33,12 +33,10 @@ class ReverseDirectionTests {
         for (direction in reverses) {
             val generator =
                 BoardGenerator(
-                    columns = 7,
-                    rows = 7,
-                    directions = listOf(direction),
-                    filler = filler,
-                    downWords =
-                        0..3,
+                    size = BoardSize(7, 7),
+                    rules = listOf(WordRule.straight(listOf(direction))),
+                    filler = Filler(filler),
+                    limits = PlacementLimits(downWords = 0..3),
                 )
             val board = generator.board(words, 8uL)
             assertTrue(board.placements.all { it.direction == direction }, "$direction")
@@ -53,12 +51,10 @@ class ReverseDirectionTests {
     fun wordsRunningUpCountTowardTheVerticalQuota() {
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                directions = listOf(Direction.RIGHT, Direction.UP),
-                filler = filler,
-                downWords =
-                    1..1,
+                size = BoardSize(7, 7),
+                rules = listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.UP))),
+                filler = Filler(filler),
+                limits = PlacementLimits(downWords = 1..1),
             )
         for (seed in 1uL..20uL) {
             val board = generator.board(listOf("CAT", "DOG", "SUN"), seed)
@@ -70,11 +66,13 @@ class ReverseDirectionTests {
     fun aWordThatReadsTheSameBackwardsStandsOnceWhenBothWaysAreOn() {
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                directions = listOf(Direction.RIGHT, Direction.LEFT, Direction.DOWN, Direction.UP),
-                filler = filler,
-                downWords = 0..3,
+                size = BoardSize(7, 7),
+                rules =
+                    listOf(
+                        WordRule.straight(listOf(Direction.RIGHT, Direction.LEFT, Direction.DOWN, Direction.UP)),
+                    ),
+                filler = Filler(filler),
+                limits = PlacementLimits(downWords = 0..3),
             )
         for (seed in 1uL..20uL) {
             val board = generator.board(listOf("LEVEL", "CAT", "SUN"), seed)
@@ -83,7 +81,10 @@ class ReverseDirectionTests {
                 "CAT",
                 "SUN",
             )) {
-                assertEquals(1, board.occurrences(word, along = generator.directions))
+                assertEquals(
+                    1,
+                    board.occurrences(word, along = generator.rules.flatMap { it.startDirections }.distinct()),
+                )
             }
         }
     }
@@ -93,7 +94,7 @@ class ReverseDirectionTests {
         val level = Placement("LEVEL", Cell(0, 0), Direction.RIGHT)
         val board = Board(listOf("LEVELX".cells, "XXXXXX".cells), listOf(level))
         for ((start, end) in listOf(0 to 4, 4 to 0)) {
-            val round = Round(board, listOf(Direction.RIGHT, Direction.LEFT))
+            val round = Round(board, listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.LEFT))))
             round.touch(Cell(0, start))
             round.drag(Cell(0, end))
             assertEquals(level, round.release())
@@ -104,7 +105,7 @@ class ReverseDirectionTests {
     fun aWordThatReadsDifferentlyBackwardsIsNotFoundFromItsEnd() {
         val cat = Placement("CAT", Cell(0, 0), Direction.RIGHT)
         val board = Board(listOf("CATX".cells, "XXXX".cells), listOf(cat))
-        val round = Round(board, listOf(Direction.RIGHT, Direction.LEFT))
+        val round = Round(board, listOf(WordRule.straight(listOf(Direction.RIGHT, Direction.LEFT))))
         round.touch(Cell(0, 2))
         round.drag(Cell(0, 0))
         assertNull(round.release())
@@ -114,11 +115,10 @@ class ReverseDirectionTests {
     fun aWordWhoseReverseLiesInsideAnotherIsRejectedWhenBothWaysAreOn() {
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 7,
-                directions = listOf(Direction.DOWN, Direction.UP),
-                filler = LetterWeights(mapOf("x" to 1.0)),
-                downWords = 0..2,
+                size = BoardSize(7, 7),
+                rules = listOf(WordRule.straight(listOf(Direction.DOWN, Direction.UP))),
+                filler = Filler(LetterWeights(mapOf("x" to 1.0))),
+                limits = PlacementLimits(downWords = 0..2),
             )
         val failure = assertFailsWith<BoardGenerator.Failure> { generator.request(listOf("TAC", "CATS")) }
         assertEquals(BoardGenerator.Failure.NoRoom(listOf("TAC", "CATS"), 7, 7), failure)

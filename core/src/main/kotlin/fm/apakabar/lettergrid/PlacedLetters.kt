@@ -37,3 +37,6 @@ private fun <Letter> Iterable<Placement>.letters(
 
 internal val List<WordRule>.startDirections: List<Direction>
     get() = Direction.entries.filter { way -> any { way in it.startDirections } }
+
+internal val List<WordRule>.startDirectionsInOrder: List<Direction>
+    get() = flatMap { it.startDirections }.distinct()

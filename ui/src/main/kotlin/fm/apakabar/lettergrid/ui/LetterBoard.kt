@@ -44,10 +44,7 @@ import kotlinx.coroutines.delay
 fun LetterBoard(
     round: Round,
     style: LetterGridStyle,
-    onTouch: (Cell) -> Unit,
-    onDrag: (Cell) -> Unit,
-    onRelease: () -> Unit,
-    onRejectionShown: () -> Unit,
+    actions: LetterBoardActions,
     modifier: Modifier = Modifier,
     missed: Placement? = null,
     traceCells: List<Cell> = emptyList(),
@@ -55,17 +52,27 @@ fun LetterBoard(
 ) {
     round.changes.collectAsState().value
     val board = round.board
-    val currentOnRejectionShown by rememberUpdatedState(onRejectionShown)
+    val currentActions by rememberUpdatedState(actions)
     Feedback(round)
     LaunchedEffect(round.rejected) {
         if (round.rejected.isEmpty()) return@LaunchedEffect
         delay(style.rejectionDelay)
-        currentOnRejectionShown()
+        currentActions.onRejectionShown()
     }
     BoxWithConstraints(modifier.aspectRatio(maxOf(board.columns, 1).toFloat() / maxOf(board.rows, 1))) {
         val side = maxWidth / maxOf(board.columns, 1)
         val sidePx = with(LocalDensity.current) { side.toPx() }
-        Box(Modifier.pointerInput(board, sidePx) { dragCells(board, sidePx, onTouch, onDrag, onRelease) }) {
+        Box(
+            Modifier.pointerInput(board, sidePx) {
+                dragCells(
+                    board,
+                    sidePx,
+                    { currentActions.onTouch(it) },
+                    { currentActions.onDrag(it) },
+                    { currentActions.onRelease() },
+                )
+            },
+        ) {
             for ((cells, color) in bars(round, style)) LetterHighlight(cells, side, color)
             Rejection(round.rejected, side, style.rejected)
             if (missed != null) LetterHighlight(missed.cells, side, style.rejected)

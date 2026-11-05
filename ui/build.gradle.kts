@@ -56,6 +56,6 @@ mavenPublishing {
     coordinates("fm.apakabar", "lettergrid-kotlin-ui", version.toString())
     pom {
         name.set("LetterGrid UI for Kotlin")
-        description.set("The Compose board and hidden word list of LetterGrid.")
+        description.set("The Compose board of LetterGrid.")
     }
 }

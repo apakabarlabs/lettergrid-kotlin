@@ -49,24 +49,18 @@ class SeededBoardTests {
         val turns =
             test.turns
                 ?: return BoardGenerator(
-                    columns = test.columns,
-                    rows = test.rows,
-                    maxRows = test.maxRows,
-                    directions = test.directions,
-                    filler = filler,
-                    downWords = downWords,
-                    conditionalCharacters = symbols,
+                    size = BoardSize(test.columns, test.rows, test.maxRows),
+                    rules = listOf(WordRule.straight(test.directions)),
+                    filler = Filler(filler, conditionalCharacters = symbols),
+                    limits = PlacementLimits(downWords = downWords),
                 ).request(test.words)
         val rules = turns.map { WordRule(test.directions, it) }
         val first = rules.first { it.turns == test.firstRuleTurns }
         return BoardGenerator(
-            columns = test.columns,
-            rows = test.rows,
-            maxRows = test.maxRows,
+            size = BoardSize(test.columns, test.rows, test.maxRows),
             rules = rules,
-            filler = filler,
-            downWords = downWords,
-            conditionalCharacters = symbols,
+            filler = Filler(filler, conditionalCharacters = symbols),
+            limits = PlacementLimits(downWords = downWords),
         ).request(test.words, firstRule = first)
     }
 

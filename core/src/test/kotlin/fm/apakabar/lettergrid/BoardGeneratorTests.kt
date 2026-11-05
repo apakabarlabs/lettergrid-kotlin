@@ -13,7 +13,11 @@ class BoardGeneratorTests {
     private fun generator(
         columns: Int = 7,
         rows: Int = 7,
-    ) = BoardGenerator(columns = columns, rows = rows, directions = straight, filler = filler)
+    ) = BoardGenerator(
+        size = BoardSize(columns, rows),
+        rules = listOf(WordRule.straight(straight)),
+        filler = Filler(filler),
+    )
 
     @Test
     fun placesEveryWordExactlyOnce() {
@@ -41,11 +45,10 @@ class BoardGeneratorTests {
         val directions = listOf(Direction.RIGHT, Direction.DOWN, Direction.DOWN_RIGHT, Direction.DOWN_LEFT)
         val generator =
             BoardGenerator(
-                columns = 7,
-                rows = 15,
-                directions = directions,
-                filler = LetterWeights(mapOf("a" to 1_000.0, "b" to 1.0)),
-                downWords = 1..2,
+                size = BoardSize(7, 15),
+                rules = listOf(WordRule.straight(directions)),
+                filler = Filler(LetterWeights(mapOf("a" to 1_000.0, "b" to 1.0))),
+                limits = PlacementLimits(downWords = 1..2),
             )
         val words = listOf("PERSPECTIVE", "SUN", "MOON")
         val board = generator.board(words, 1uL)
@@ -55,7 +58,13 @@ class BoardGeneratorTests {
 
     @Test
     fun moreWordsWiderThanTheBoardThanMayStandDownHaveNoRoom() {
-        val generator = BoardGenerator(columns = 4, rows = 4, directions = straight, filler = filler, downWords = 0..1)
+        val generator =
+            BoardGenerator(
+                BoardSize(4, 4),
+                listOf(WordRule.straight(straight)),
+                Filler(filler),
+                PlacementLimits(0..1),
+            )
         assertFailsWith<BoardGenerator.Failure> { generator.board(listOf("elephant", "umbrella"), 1uL) }
     }
 
@@ -63,7 +72,12 @@ class BoardGeneratorTests {
     fun theWordsStandingDownStayWithinTheirRange() {
         for (range in listOf(0..1, 2..3, 3..5)) {
             val generator =
-                BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler, downWords = range)
+                BoardGenerator(
+                    BoardSize(7, 7),
+                    listOf(WordRule.straight(straight)),
+                    Filler(filler),
+                    PlacementLimits(range),
+                )
             for (seed in 1uL..20uL) {
                 val board = generator.board(listOf("cat", "dog", "sun", "pen", "map"), seed)
                 assertTrue(board.placements.count { it.direction == Direction.DOWN } in range)
@@ -76,21 +90,23 @@ class BoardGeneratorTests {
         for (firstDirection in listOf(null, Direction.RIGHT)) {
             val generator =
                 BoardGenerator(
-                    columns = 3,
-                    rows = 3,
-                    directions = straight,
-                    filler = filler,
-                    downWords =
-                        2..2,
+                    size = BoardSize(3, 3),
+                    rules = listOf(WordRule.straight(straight)),
+                    filler = Filler(filler),
+                    limits = PlacementLimits(downWords = 2..2),
                 )
-            assertFailsWith<BoardGenerator.Failure> { generator.board(listOf("CAT"), 1uL, firstDirection) }
+            assertFailsWith<BoardGenerator.Failure> {
+                generator.board(listOf("CAT"), 1uL, firstDirection?.let { WordRule.straight(listOf(it)) })
+            }
         }
     }
 
     @Test
     fun repeatedTargetsAreRejectedAfterCaseNormalization() {
         for (firstDirection in listOf(null, Direction.RIGHT)) {
-            assertFailsWith<BoardGenerator.Failure> { generator().board(listOf("cat", "CAT"), 1uL, firstDirection) }
+            assertFailsWith<BoardGenerator.Failure> {
+                generator().board(listOf("cat", "CAT"), 1uL, firstDirection?.let { WordRule.straight(listOf(it)) })
+            }
         }
     }
 
@@ -112,7 +128,13 @@ class BoardGeneratorTests {
 
     @Test
     fun wordsTooWideToLieBesideTheStandingOnesGetRowsOfTheirOwn() {
-        val generator = BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler, downWords = 2..2)
+        val generator =
+            BoardGenerator(
+                BoardSize(7, 7),
+                listOf(WordRule.straight(straight)),
+                Filler(filler),
+                PlacementLimits(2..2),
+            )
         val words = listOf("breakfast", "telephone", "kitchen", "freedom", "weather")
         for (seed in 1uL..10uL) {
             val board = generator.board(words, seed)
@@ -123,7 +145,13 @@ class BoardGeneratorTests {
 
     @Test
     fun aWordLyingAcrossOftenCrossesOneStandingDown() {
-        val generator = BoardGenerator(columns = 7, rows = 7, directions = straight, filler = filler, downWords = 2..2)
+        val generator =
+            BoardGenerator(
+                BoardSize(7, 7),
+                listOf(WordRule.straight(straight)),
+                Filler(filler),
+                PlacementLimits(2..2),
+            )
         val crossed =
             (1uL..20uL).filter { seed ->
                 val cells =

@@ -228,47 +228,47 @@ internal class LetterRuns(
     val columns: Int,
     val rows: Int,
 ) {
-    private class Triple(
-        val first: Cell,
-        val second: Cell,
-        val third: Cell,
+    private class Run(
+        val cells: List<Cell>,
     ) {
         fun matches(letters: List<List<String?>>): Boolean {
+            val first = cells.first()
             val letter = letters[first.row][first.column] ?: return false
-            return letters[second.row][second.column] == letter && letters[third.row][third.column] == letter
+            return cells.drop(1).all { letters[it.row][it.column] == letter }
         }
     }
 
-    private val triplesByCell: Map<Cell, List<Triple>>
+    private val runsByCell: Map<Cell, List<Run>>
 
     init {
-        val triples = mutableSetOf<List<Cell>>()
+        val length = Generation.settings.fill.runLength
+        val inTargets = mutableSetOf<List<Cell>>()
         for (placement in placements) {
             val cells = placement.cells
-            if (cells.size < 3) continue
-            for (start in 0..(cells.size - 3)) {
-                val run = cells.subList(start, start + 3).toList()
-                triples += run
-                triples += run.asReversed().toList()
+            if (cells.size < length) continue
+            for (start in 0..(cells.size - length)) {
+                val run = cells.subList(start, start + length).toList()
+                inTargets += run
+                inTargets += run.asReversed().toList()
             }
         }
-        val indexed = mutableMapOf<Cell, MutableList<Triple>>()
+        val indexed = mutableMapOf<Cell, MutableList<Run>>()
         for (row in 0 until rows) {
             for (column in 0 until columns) {
                 val start = Cell(row, column)
                 for (direction in Direction.lineAxes) {
-                    val cells = (0 until 3).map { start.moved(direction, it) }
+                    val cells = (0 until length).map { start.moved(direction, it) }
                     if (!cells.all { it.row in 0 until rows && it.column in 0 until columns } ||
-                        cells in triples
+                        cells in inTargets
                     ) {
                         continue
                     }
-                    val triple = Triple(cells[0], cells[1], cells[2])
-                    for (cell in cells) indexed.getOrPut(cell) { mutableListOf() } += triple
+                    val run = Run(cells)
+                    for (cell in cells) indexed.getOrPut(cell) { mutableListOf() } += run
                 }
             }
         }
-        triplesByCell = indexed
+        runsByCell = indexed
     }
 
     fun containsForbiddenRun(letters: List<List<String?>>): Boolean =
@@ -277,7 +277,7 @@ internal class LetterRuns(
     fun hasForbiddenRun(
         through: Cell,
         letters: List<List<String?>>,
-    ): Boolean = triplesByCell[through].orEmpty().any { it.matches(letters) }
+    ): Boolean = runsByCell[through].orEmpty().any { it.matches(letters) }
 }
 
 internal fun Board.Companion.targets(
