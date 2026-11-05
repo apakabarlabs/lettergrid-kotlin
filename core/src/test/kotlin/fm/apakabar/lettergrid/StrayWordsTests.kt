@@ -3,7 +3,7 @@ package fm.apakabar.lettergrid
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-class NoiseScoreTests {
+class StrayWordsTests {
     private val rules = (0..3).map { WordRule(Direction.entries, it) }
 
     @Test
