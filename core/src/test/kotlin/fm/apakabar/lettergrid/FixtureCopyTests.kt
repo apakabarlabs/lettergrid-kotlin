@@ -61,6 +61,7 @@ class FixtureCopyTests {
     companion object {
         private val SHARED =
             listOf(
+                "alternative-readings.yaml",
                 "cell-text.yaml",
                 "directions.yaml",
                 "filler-alphabet.yaml",

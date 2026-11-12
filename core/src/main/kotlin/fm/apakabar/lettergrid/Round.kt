@@ -30,7 +30,7 @@ enum class HintOrder {
 }
 
 class Round(
-    val board: Board,
+    board: Board,
     private val rules: List<WordRule>,
     options: RoundOptions = RoundOptions(),
     progress: RoundProgress = RoundProgress(),
@@ -44,6 +44,9 @@ class Round(
     }
 
     enum class Phase { INTRODUCING, PLAYING, WON, LOST }
+
+    var board: Board = board
+        private set
 
     val id: UUID = UUID.randomUUID()
     val showsFirstWord: Boolean
@@ -179,9 +182,21 @@ class Round(
         val released = selection
         selection = emptyList()
         if (phase != Phase.PLAYING || released.isEmpty()) return null
-        val placement = board.placements.firstOrNull { it.reads(released) }?.takeIf { it !in foundPlacements }
+        val placement = acceptedPlacement(released)
         if (placement == null && released.size > 1) rejected = released
         return placement?.let(::record)
+    }
+
+    private fun acceptedPlacement(path: List<Cell>): Placement? {
+        val open = board.placements.filter { it !in foundPlacements }
+        open.firstOrNull { it.reads(path) }?.let { return it }
+        val text = board.text(path)
+        val target = open.firstOrNull { it.word == text } ?: return null
+        if (rules.none { it.matches(path) }) return null
+        val drawn = Placement(target.word, path)
+        board = Board(board.letters, board.placements.map { if (it == target) drawn else it })
+        revealedCounts.remove(target)?.let { revealedCounts[drawn] = it }
+        return drawn
     }
 
     fun reveal(): Placement? {
