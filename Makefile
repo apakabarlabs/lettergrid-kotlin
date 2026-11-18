@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := build
 VERSION = $(shell sed -n 's/^\#\# \[\([^]]*\)\].*/\1/p' CHANGELOG.md | head -1)
 
-.PHONY: install-tools comments lint detekt lint-fix format test-build test docs build clean release publish publish-local publish-check
+.PHONY: install-tools comments lint detekt lint-fix format test-build test docs build release publish publish-local publish-check
 
 install-tools:
 	python3 -m pip install --quiet --upgrade git+https://github.com/botforge-pro/commentcensor.git
@@ -50,6 +50,3 @@ publish-local:
 
 publish-check:
 	./gradlew publishToMavenLocal
-
-clean:
-	./gradlew clean
