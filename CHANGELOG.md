@@ -12,6 +12,18 @@ build the same board. Patch numbers are counted separately in each library, and 
 release never changes behaviour, so a seed gives the same board across patch releases; a
 minor release may change the boards.
 
+## [0.27.1] - 2026-11-20
+
+### Changed
+
+- `String.cells` and `String.cellUppercased` are faster for text in the Latin, Cyrillic,
+  Greek, Armenian and Georgian alphabets, with or without ASCII digits, spaces and
+  punctuation: such text is cut into one cell per character directly, without the
+  platform's `BreakIterator`, the grapheme splitter that dominated the time of reading a
+  long word list on Android. The cells are the same as before, so boards do not change.
+  Other text, such as other scripts, emoji or a letter written with a separate combining
+  accent, is cut by `BreakIterator` as before.
+
 ## [0.27.0] - 2026-11-13
 
 ### Changed
