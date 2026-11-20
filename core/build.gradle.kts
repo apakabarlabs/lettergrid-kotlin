@@ -17,6 +17,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.icu4j)
 }
 
 tasks.test {

@@ -1,63 +1,82 @@
 package fm.apakabar.lettergrid
 
 import org.junit.jupiter.api.Test
-import java.text.BreakIterator
 import java.text.Normalizer
 import kotlin.test.assertEquals
+import com.ibm.icu.text.BreakIterator as UnicodeBreaks
+import java.text.BreakIterator as PlatformBreaks
 
 class GraphemeCellsTests {
     @Test
-    fun everyCharacterOfTheAlphabetsCutsAsGraphemeClustersDo() {
-        val characters = alphabetCharacters()
+    fun textOfTheSeparateAlphabetsCutsAsUnicodeGraphemeClustersDo() {
+        val characters = charactersOf(separateScripts) + (' '..'~')
         val texts = characters.flatMap { listOf("$it", "a$it", "${it}a", "й$it") } + words
         for (text in texts) {
-            assertEquals(graphemes(text), text.cells, text)
-            assertEquals(uppercasedByGraphemes(text), text.cellUppercased, text)
+            assertEquals(unicodeGraphemes(text), text.cells, text)
+            assertEquals(uppercased(text, ::unicodeGraphemes), text.cellUppercased, text)
         }
     }
 
     @Test
-    fun textBeyondTheAlphabetsStillCutsAsGraphemeClustersDo() {
-        for (text in beyondAlphabets) {
-            assertEquals(graphemes(text), text.cells, text)
-            assertEquals(uppercasedByGraphemes(text), text.cellUppercased, text)
+    fun otherTextStillCutsAsThePlatformCutsIt() {
+        val characters = charactersOf(setOf(Character.UnicodeScript.COMMON, Character.UnicodeScript.INHERITED))
+        val texts = characters.flatMap { listOf("$it", "a$it", "${it}a") } + beyondAlphabets
+        for (text in texts) {
+            assertEquals(platformGraphemes(text), text.cells, text)
+            assertEquals(uppercased(text, ::platformGraphemes), text.cellUppercased, text)
         }
     }
 
-    private fun alphabetCharacters(): List<Char> =
+    private fun charactersOf(scripts: Set<Character.UnicodeScript>): List<Char> =
         (0..0xFFFF)
             .map { it.toChar() }
-            .filter { !it.isSurrogate() && Character.UnicodeScript.of(it.code) in alphabets }
+            .filter { !it.isSurrogate() && Character.UnicodeScript.of(it.code) in scripts }
 
-    private fun graphemes(text: String): List<String> {
-        val boundaries = BreakIterator.getCharacterInstance()
+    private fun unicodeGraphemes(text: String): List<String> {
+        val boundaries = UnicodeBreaks.getCharacterInstance()
         boundaries.setText(text)
+        return cut(text, boundaries.first()) { boundaries.next() }
+    }
+
+    private fun platformGraphemes(text: String): List<String> {
+        val boundaries = PlatformBreaks.getCharacterInstance()
+        boundaries.setText(text)
+        return cut(text, boundaries.first()) { boundaries.next() }
+    }
+
+    private fun cut(
+        text: String,
+        first: Int,
+        next: () -> Int,
+    ): List<String> {
         val cells = mutableListOf<String>()
-        var start = boundaries.first()
-        var end = boundaries.next()
-        while (end != BreakIterator.DONE) {
+        var start = first
+        var end = next()
+        while (end != PlatformBreaks.DONE) {
             cells += text.substring(start, end)
             start = end
-            end = boundaries.next()
+            end = next()
         }
         return cells
     }
 
-    private fun uppercasedByGraphemes(text: String): String =
+    private fun uppercased(
+        text: String,
+        graphemes: (String) -> List<String>,
+    ): String =
         graphemes(Normalizer.normalize(text, Normalizer.Form.NFC)).joinToString("") { letter ->
             val upper = Normalizer.normalize(letter.uppercase(), Normalizer.Form.NFC)
             if (graphemes(upper).size == 1) upper else letter
         }
 
     private companion object {
-        val alphabets =
+        val separateScripts =
             setOf(
                 Character.UnicodeScript.LATIN,
                 Character.UnicodeScript.CYRILLIC,
                 Character.UnicodeScript.GREEK,
                 Character.UnicodeScript.ARMENIAN,
                 Character.UnicodeScript.GEORGIAN,
-                Character.UnicodeScript.COMMON,
             )
 
         val words =
@@ -90,6 +109,8 @@ class GraphemeCellsTests {
                 "a‍b",
                 "\r\n",
                 "بَاب",
+                "rock’n’roll",
+                "пʼять",
             )
     }
 }
