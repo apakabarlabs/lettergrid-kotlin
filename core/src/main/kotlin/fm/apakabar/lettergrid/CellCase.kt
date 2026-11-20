@@ -12,6 +12,7 @@ val String.cellUppercased: String
 
 val String.cells: List<String>
     get() {
+        if (hasOneCellPerChar) return map(Char::toString)
         val boundaries = characterBoundaries.get()
         boundaries.setText(this)
         val cells = mutableListOf<String>()
@@ -27,11 +28,38 @@ val String.cells: List<String>
 
 private val String.isOneCell: Boolean
     get() {
+        if (hasOneCellPerChar) return length == 1
         val boundaries = characterBoundaries.get()
         boundaries.setText(this)
         boundaries.first()
         return boundaries.next() != BreakIterator.DONE && boundaries.next() == BreakIterator.DONE
     }
+
+private val String.hasOneCellPerChar: Boolean
+    get() = all(Char::standsAlone)
+
+private val Char.standsAlone: Boolean
+    get() = this in ' '..'~' || (Character.getType(this) !in joiningTypes && code.script in separateScripts)
+
+private val Int.script: Character.UnicodeScript get() = Character.UnicodeScript.of(this)
+
+private val joiningTypes =
+    setOf(
+        Character.NON_SPACING_MARK.toInt(),
+        Character.ENCLOSING_MARK.toInt(),
+        Character.COMBINING_SPACING_MARK.toInt(),
+        Character.FORMAT.toInt(),
+        Character.CONTROL.toInt(),
+    )
+
+private val separateScripts =
+    setOf(
+        Character.UnicodeScript.LATIN,
+        Character.UnicodeScript.CYRILLIC,
+        Character.UnicodeScript.GREEK,
+        Character.UnicodeScript.ARMENIAN,
+        Character.UnicodeScript.GEORGIAN,
+    )
 
 private val characterBoundaries: ThreadLocal<BreakIterator> =
     ThreadLocal.withInitial { BreakIterator.getCharacterInstance() }
